@@ -3,7 +3,7 @@ import { dbToGain } from './engine/engine.js';
 import { encodeWav, makeZip, moduleSource, patchJson, readme, readPatchFile, setModuleSource, setReadme, slug } from './engine/export.js';
 import { MAX_RENDER_MS, renderPatch } from './engine/render.js';
 import { decodeToSample, loadSamples, pruneSamples, sampleDurationMs, storeSample } from './engine/samples.js';
-import { addSampleLayer, addSound, bumpSamples, currentSound, setPref, showToast, useStore } from './store.js';
+import { addSampleLayer, addSound, bumpSamples, currentSound, importSet, sampleIdsInSets, setPref, showToast, useStore } from './store.js';
 
 const AUDIO_EXT = /\.(wav|mp3|ogg|oga|m4a|aac|aif|aiff|flac|webm|opus)$/i;
 export const isAudioFile = (f) => /^audio\//.test(f.type) || AUDIO_EXT.test(f.name);
@@ -58,6 +58,68 @@ export async function importProjectFile(file) {
   }
 }
 
+const ZIP_END = 0x06054b50;
+const ZIP_CENTRAL = 0x02014b50;
+const ZIP_STORED = 0;
+const ZIP_DEFLATED = 8;
+
+// Reads the files in a zip through its central directory. Earcue's own zips are stored uncompressed;
+// a zip someone re-made with a system tool is usually deflated, which the browser can inflate.
+export async function readZip(bytes) {
+  const v = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  let end = bytes.length - 22;
+  while (end >= 0 && v.getUint32(end, true) !== ZIP_END) end -= 1;
+  if (end < 0) throw new Error('not a zip');
+  const count = v.getUint16(end + 10, true);
+  let p = v.getUint32(end + 16, true);
+  const files = [];
+  for (let i = 0; i < count; i++) {
+    if (v.getUint32(p, true) !== ZIP_CENTRAL) throw new Error('bad zip');
+    const method = v.getUint16(p + 10, true);
+    const size = v.getUint32(p + 20, true);
+    const nameLen = v.getUint16(p + 28, true);
+    const local = v.getUint32(p + 42, true);
+    const name = new TextDecoder().decode(bytes.subarray(p + 46, p + 46 + nameLen));
+    p += 46 + nameLen + v.getUint16(p + 30, true) + v.getUint16(p + 32, true);
+    const start = local + 30 + v.getUint16(local + 26, true) + v.getUint16(local + 28, true);
+    const raw = bytes.subarray(start, start + size);
+    if (method === ZIP_STORED) files.push({ name, data: raw });
+    else if (method === ZIP_DEFLATED) files.push({ name, data: new Uint8Array(await new Response(new Blob([raw]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer()) });
+  }
+  return files;
+}
+
+// Makes a new set from an exported set's zip, or from project files picked together.
+export async function importSetFiles(files) {
+  const patches = [];
+  let name = '';
+  for (const f of files) {
+    try {
+      if (/\.zip$/i.test(f.name)) {
+        name ||= f.name.replace(/\.zip$/i, '');
+        for (const entry of await readZip(new Uint8Array(await f.arrayBuffer()))) {
+          if (!/\.json$/i.test(entry.name) || /(^|\/)(__MACOSX|\.)/.test(entry.name)) continue;
+          try {
+            patches.push(readPatchFile(new TextDecoder().decode(entry.data)));
+          } catch {
+            // A JSON file that isn't a project, such as a package manifest, is skipped.
+          }
+        }
+      } else patches.push(readPatchFile(await f.text()));
+    } catch {
+      showToast(`Couldn't read ${f.name}.`);
+      return;
+    }
+  }
+  if (!patches.length) {
+    showToast('No projects found. Export a set with Project or Everything, then import its zip.');
+    return;
+  }
+  importSet(name || 'Imported sounds', patches);
+}
+
+export const pickSetFiles = () => pickFiles('.zip,.json,application/zip,application/json', true, (files) => files.length && importSetFiles(files));
+
 export const pickAudioFiles = () => pickFiles('audio/*,.wav,.mp3,.ogg,.m4a,.aif,.aiff,.flac,.webm', true, importAudioFiles);
 export const pickReferenceFile = () => pickFiles('audio/*,.wav,.mp3,.ogg,.m4a,.aif,.aiff,.flac,.webm', false, (files) => files[0] && importReference(files[0]));
 export const pickProjectFile = () => pickFiles('.json,application/json', false, (files) => files[0] && importProjectFile(files[0]));
@@ -82,14 +144,16 @@ async function pruneIfOnlyTab(keep) {
   navigator.locks.request(TABS_LOCK, { mode: 'shared' }, () => new Promise(() => {}));
 }
 
-// Loads audio for sample layers and references saved in earlier visits, and deletes the rest.
+// Deletes stored audio that no saved set or comparison uses any more, then loads what the open set
+// and the comparison list need. Sets opened later load their own audio.
 export async function loadStoredSamples() {
   const s = useStore.getState();
-  const ids = new Set();
-  for (const p of s.ws.sounds) for (const L of p.layers) if (L.type === 'sample' && L.sampleId) ids.add(L.sampleId);
-  for (const r of s.refs) ids.add(r.sampleId);
-  await pruneIfOnlyTab(ids);
-  if (await loadSamples([...ids])) bumpSamples();
+  const keep = sampleIdsInSets();
+  for (const r of s.refs) keep.add(r.sampleId);
+  await pruneIfOnlyTab(keep);
+  const ids = s.refs.map((r) => r.sampleId);
+  if (s.ws) for (const p of s.ws.sounds) for (const L of p.layers) if (L.type === 'sample' && L.sampleId) ids.push(L.sampleId);
+  if (await loadSamples(ids)) bumpSamples();
 }
 
 export function download(filename, data, type) {
@@ -116,9 +180,17 @@ async function renderForExport(patch, { channels, sampleRate }) {
   return { res, chs: [mono] };
 }
 
-export async function exportSound({ what, scope, name, channels, sampleRate, bits }) {
+const AUDIO_TYPE = { wav: 'audio/wav', ogg: 'audio/ogg' };
+
+async function encodeAudio(chs, { format, sampleRate, bits }) {
+  if (format !== 'ogg') return encodeWav(chs, sampleRate, bits);
+  const { encodeOgg } = await import('./engine/ogg.js');
+  return encodeOgg(chs, sampleRate);
+}
+
+export async function exportSound({ what, scope, name, format, channels, sampleRate, bits }) {
   const enc = new TextEncoder();
-  const info = { channels, sampleRate, bits };
+  const info = { format, channels, sampleRate, bits };
   if (scope === 'set') {
     const sounds = useStore.getState().ws.sounds;
     const files = [];
@@ -131,7 +203,7 @@ export async function exportSound({ what, scope, name, channels, sampleRate, bit
       for (let i = 2; used.has(base); i += 1) base = `${slug(p.name)}-${i}`;
       used.add(base);
       rendered.push({ patch: p, res, base });
-      if (what === 'wav' || what === 'all') files.push({ name: `wav/${base}.wav`, data: encodeWav(chs, sampleRate, bits) });
+      if (what === 'audio' || what === 'all') files.push({ name: `${format}/${base}.${format}`, data: await encodeAudio(chs, info) });
       if (what === 'all' || what === 'project') files.push({ name: `projects/${base}.json`, data: enc.encode(patchJson(p)) });
     }
     if (what === 'code' || what === 'all') files.push({ name: 'sounds.js', data: enc.encode(setModuleSource(rendered)) });
@@ -143,11 +215,11 @@ export async function exportSound({ what, scope, name, channels, sampleRate, bit
   const patch = currentSound();
   const base = slug(name || patch.name);
   const { res, chs } = await renderForExport(patch, info);
-  if (what === 'wav') return download(`${base}.wav`, encodeWav(chs, sampleRate, bits), 'audio/wav');
+  if (what === 'audio') return download(`${base}.${format}`, await encodeAudio(chs, info), AUDIO_TYPE[format]);
   if (what === 'code') return download(`${base}.js`, moduleSource(patch, res), 'text/javascript');
   if (what === 'project') return download(`${base}.json`, patchJson(patch), 'application/json');
   const zip = makeZip([
-    { name: `${base}.wav`, data: encodeWav(chs, sampleRate, bits) },
+    { name: `${base}.${format}`, data: await encodeAudio(chs, info) },
     { name: `${base}.js`, data: enc.encode(moduleSource(patch, res)) },
     { name: `${base}.json`, data: enc.encode(patchJson(patch)) },
     { name: 'README.txt', data: enc.encode(readme(patch, base, { ...info, ms: Math.round(res.duration * 1000) })) },

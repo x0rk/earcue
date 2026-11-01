@@ -1,4 +1,4 @@
-import { dbToGain, buildLayer, scheduleSound } from './engine.js';
+import { dbToGain, buildLayer, sampleRates, scheduleSound, slideDuration } from './engine.js';
 import { samples, sampleDurationMs } from './samples.js';
 
 const MAX_RENDER_S = 6;
@@ -9,7 +9,8 @@ const AUDIBLE_THRESHOLD = 0.01; // -40 dB below peak: what counts as audible
 export function sampleClipMs(L) {
   const s = samples.get(L.sampleId);
   if (!s) return 20;
-  return Math.max(1, sampleDurationMs(s) - L.trimStart - L.trimEnd) / Math.pow(2, L.pitch / 12);
+  const { r0, r1, g } = sampleRates(L);
+  return slideDuration(Math.max(1, sampleDurationMs(s) - L.trimStart - L.trimEnd) / 1000, r0, r1, g) * 1000;
 }
 
 export function clipMs(L) {

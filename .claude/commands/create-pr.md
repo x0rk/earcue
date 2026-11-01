@@ -39,7 +39,7 @@ If there are uncommitted changes:
   - If nothing is staged, run `git add -u` to stage all modified/deleted tracked files.
 - Check for **untracked files** with `git status --porcelain`. Warn the user about any sensitive files (`.env`, credentials, binaries, secrets) — do NOT stage those. For other untracked files, ask the user whether to include them.
 - Draft and create a commit using format `<type>(<scope>): <description>`.
-- Run `npm run build` before committing and fix anything it reports. The repo has no pre-commit hooks or automated tests yet.
+- Run `npm test` and `npm run build` before committing and fix anything they report. The repo has no pre-commit hooks; CI runs the same two commands on every PR.
 - Retry the commit once the build passes (max 2 fix attempts).
 - After fixing, summarize what was broken and what was changed to fix it.
 - If a fix cannot be found after thorough investigation, stop and report to the user.

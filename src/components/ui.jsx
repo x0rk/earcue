@@ -35,6 +35,7 @@ const VARIANTS = {
   secondary: 'bg-field text-ink hover:bg-field-hover',
   outline: 'border border-line-strong bg-panel text-ink hover:bg-panel-2',
   ghost: 'text-muted hover:bg-field hover:text-ink',
+  danger: 'bg-hot text-panel hover:bg-hot/90',
 };
 const SIZES = { sm: 'h-7 px-2.5 text-[12px]', md: 'h-8 px-3 text-[13px]', lg: 'h-9 px-4 text-[13px]', icon: 'h-8 w-8', iconSm: 'h-7 w-7' };
 
@@ -200,12 +201,12 @@ export function Scrub({ label, value, onChange, onCommit, min, max, step = 1, lo
 }
 
 // ---------- segmented ----------
-export function Segmented({ label, value, options, onChange, hint, size = 'md', stack = false }) {
+export function Segmented({ label, value, options, onChange, hint, size = 'md', stack = false, hideLabel = false }) {
   const hintId = useId();
   // Stacked puts the label above, giving four longer options the full panel width.
   return (
     <div className={cx('flex gap-2', stack ? 'flex-col gap-1.5' : 'items-center')} {...hintProps(label, hint)}>
-      {label && <span className={cx('shrink-0 text-[12.5px] text-muted', !stack && 'w-[68px]')}>{label}</span>}
+      {label && !hideLabel && <span className={cx('shrink-0 text-[12.5px] text-muted', !stack && 'w-[68px]')}>{label}</span>}
       <HintText id={hintId} text={hint} />
       <ToggleGroup.Root
         type="single"
@@ -247,7 +248,7 @@ export function SwitchRow({ label, checked, onChange, hint }) {
   return (
     <>
       <HintText id={hintId} text={hint} />
-      <label className="flex h-8 cursor-pointer items-center justify-between rounded-[7px] px-2.5 text-[12.5px] text-muted hover:bg-field hover:text-ink" {...hintProps(label, hint)}>
+      <label className="flex h-8 items-center justify-between rounded-[7px] px-2.5 text-[12.5px] text-muted hover:bg-field hover:text-ink" {...hintProps(label, hint)}>
         {label}
         <RSwitch.Root
           checked={checked}
@@ -317,7 +318,7 @@ export function Select({ value, onChange, groups, placeholder, label, className,
                   <RSelect.Item
                     key={it.value}
                     value={it.value}
-                    className="relative flex h-8 cursor-pointer select-none items-center rounded-md pl-7 pr-2 text-[13px] text-ink outline-none data-[highlighted]:bg-field"
+                    className="relative flex h-8 select-none items-center rounded-md pl-7 pr-2 text-[13px] text-ink outline-none data-[highlighted]:bg-field"
                   >
                     <RSelect.ItemIndicator className="absolute left-2">
                       <Check className="size-3.5" />
@@ -367,7 +368,7 @@ export function Menu({ trigger, items, align = 'end' }) {
                   it.onSelect?.();
                 }}
                 className={cx(
-                  'flex cursor-pointer select-none items-center gap-2.5 rounded-md px-2 py-1.5 text-[13px] outline-none data-[disabled]:opacity-40 data-[highlighted]:bg-field [&_svg]:size-4',
+                  'flex select-none items-center gap-2.5 rounded-md px-2 py-1.5 text-[13px] outline-none data-[disabled]:opacity-40 data-[highlighted]:bg-field [&_svg]:size-4',
                   it.danger ? 'text-hot' : 'text-ink',
                 )}
               >
@@ -408,7 +409,7 @@ export function Dialog({ open, onOpenChange, title, description, children, width
             }
           }}
         >
-          <div className="flex items-start justify-between gap-4 px-5 pb-2 pt-5">
+          <div className={cx('flex items-start justify-between gap-4 px-5 pt-5', children ? 'pb-2' : 'pb-5')}>
             <div>
               <RDialog.Title className="text-[16px] font-semibold tracking-tight">{title}</RDialog.Title>
               {description ? (
@@ -423,7 +424,7 @@ export function Dialog({ open, onOpenChange, title, description, children, width
               </Button>
             </RDialog.Close>
           </div>
-          <div className="min-h-0 overflow-y-auto px-5 pb-5 pt-2">{children}</div>
+          {children && <div className="min-h-0 overflow-y-auto px-5 pb-5 pt-2">{children}</div>}
           {footer && <div className="flex flex-wrap items-center justify-end gap-2 border-t border-line bg-panel-2 px-5 py-3">{footer}</div>}
         </RDialog.Content>
       </RDialog.Portal>

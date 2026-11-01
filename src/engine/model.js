@@ -42,7 +42,7 @@ export function layerDefaults(type) {
     Object.assign(base, { freq: 900, material: 'bar', partials: 4, damping: 0.5, brightness: 0.4, strike: -14, attack: 0.3, decay: 150 });
   }
   if (type === 'sample') {
-    Object.assign(base, { sampleId: null, sampleName: '', trimStart: 0, trimEnd: 0, pitch: 0, reverse: false, fadeIn: 0, fadeOut: 5, attack: 0 });
+    Object.assign(base, { sampleId: null, sampleName: '', trimStart: 0, trimEnd: 0, pitch: 0, slideTo: 0, glide: 0, reverse: false, fadeIn: 0, fadeOut: 5, attack: 0 });
   }
   return base;
 }
@@ -148,6 +148,105 @@ export function presets() {
   ];
 }
 
+// The note palette for the starter set: B-flat major pentatonic, so any two notes sound fine together.
+const NOTE = { D5: 587.33, G5: 783.99, Bb5: 932.33, C6: 1046.5, D6: 1174.66, F6: 1396.91, G6: 1567.98, Bb6: 1864.66 };
+// One shared room, and loudness by how often a sound plays: frequent ones quiet, alerts loudest.
+const ROOM = { reverbSize: 0.25, reverbDamping: 0.5 };
+const SUBTLE = -24;
+const DEFAULT = -20;
+const ALERT = -18;
+
+// The sounds most products need, built as one family: one key, one soft material, one room. Taps are
+// shortest and quietest, alerts longest; rising means something good, falling means an ending.
+export function starterSounds() {
+  const note = (name, hz, over) => mk('tone', { name, pitchStart: hz, pitchEnd: hz, attack: 1, ...over });
+  const click = (over) => mk('noise', { name: 'Click', attack: 0.1, decay: 5, filter: { type: 'bandpass', freq: 4800, q: 1.2 }, ...over });
+  return [
+    patchOf('Tap', 'Buttons and small taps. Short and quiet, because it plays all the time.', [
+      mk('tone', { name: 'Body', wave: 'triangle', pitchStart: NOTE.D6, pitchEnd: NOTE.Bb5, glide: 12, attack: 0.3, decay: 32 }),
+      click({ level: -9 }),
+    ], { ...ROOM, hpf: 300, reverbMix: 0.05, out: SUBTLE, variation: 20 }),
+    patchOf('Toggle on', 'Switching something on. Two notes that rise; Toggle off is the same pair reversed.', [
+      click({ level: -12 }),
+      note('Low', NOTE.D6, { wave: 'triangle', attack: 0.4, decay: 30, level: -3 }),
+      note('High', NOTE.G6, { wave: 'triangle', start: 35, attack: 0.4, decay: 45 }),
+    ], { ...ROOM, hpf: 300, reverbMix: 0.06, out: SUBTLE, variation: 10 }),
+    patchOf('Toggle off', 'Switching something off. The Toggle on notes, falling.', [
+      click({ level: -12 }),
+      note('High', NOTE.G6, { wave: 'triangle', attack: 0.4, decay: 30, level: -3 }),
+      note('Low', NOTE.D6, { wave: 'triangle', start: 35, attack: 0.4, decay: 40 }),
+    ], { ...ROOM, hpf: 300, reverbMix: 0.06, out: SUBTLE, variation: 10 }),
+    patchOf('Send', 'Sending a message or submitting a form. A quick lift that lands on a note.', [
+      mk('noise', { name: 'Air', color: 'pink', attack: 3, decay: 55, level: -10, filter: { type: 'bandpass', freq: 2600, q: 1.4, envAmt: -1.5, envTime: 60 } }),
+      mk('tone', { name: 'Pop', start: 30, pitchStart: NOTE.C6, pitchEnd: NOTE.F6, glide: 30, attack: 0.5, decay: 80 }),
+    ], { ...ROOM, hpf: 250, reverbMix: 0.1, out: DEFAULT }),
+    patchOf('Receive', 'A message or an item arriving. Two soft notes that settle downward.', [
+      note('Note 1', NOTE.F6, { decay: 90, level: -2, fmRatio: 2, fmIndex: 0.4, fmDecay: 30 }),
+      note('Note 2', NOTE.C6, { start: 75, decay: 140, fmRatio: 2, fmIndex: 0.4, fmDecay: 30 }),
+    ], { ...ROOM, hpf: 250, reverbMix: 0.1, out: DEFAULT }),
+    patchOf('Success', 'A task done. Three rising notes, because rising sounds positive.', [
+      note('Note 1', NOTE.D6, { decay: 90, level: -4 }),
+      note('Note 2', NOTE.F6, { start: 60, decay: 100, level: -2 }),
+      note('Note 3', NOTE.Bb6, { start: 120, decay: 150, fmRatio: 2, fmIndex: 0.3, fmDecay: 60 }),
+    ], { ...ROOM, hpf: 250, reverbMix: 0.12, out: DEFAULT }),
+    patchOf('Error', 'Something went wrong. Two falling notes with a little edge, never harsh.', [
+      note('Note 1', NOTE.G5, { wave: 'square', decay: 70, level: -3, filter: { type: 'lowpass', freq: 2200, q: 0.7 } }),
+      note('Note 2', NOTE.D5, { wave: 'square', start: 110, decay: 200, filter: { type: 'lowpass', freq: 2000, q: 0.7 } }),
+    ], { ...ROOM, hpf: 250, reverbMix: 0.1, out: ALERT }),
+    patchOf('Notification', 'Something needs attention. The longest and brightest sound in the set.', [
+      note('Chime 1', NOTE.F6, { decay: 260, level: -3, fmRatio: 3.5, fmIndex: 0.7, fmDecay: 40 }),
+      note('Chime 2', NOTE.Bb6, { start: 110, decay: 380, fmRatio: 3.5, fmIndex: 0.7, fmDecay: 50 }),
+    ], { ...ROOM, hpf: 250, reverbMix: 0.14, out: ALERT }),
+  ];
+}
+
+const OPPOSITE_WORDS = [
+  ['on', 'off'],
+  ['open', 'close'],
+  ['in', 'out'],
+  ['up', 'down'],
+  ['show', 'hide'],
+  ['expand', 'collapse'],
+  ['send', 'receive'],
+  ['success', 'error'],
+  ['connect', 'disconnect'],
+];
+
+function oppositeName(name) {
+  for (const [a, b] of OPPOSITE_WORDS) {
+    for (const [from, to] of [
+      [a, b],
+      [b, a],
+    ]) {
+      const m = name.match(new RegExp(`\\b${from}\\b`, 'i'));
+      if (!m) continue;
+      const word = m[0][0] === m[0][0].toUpperCase() ? to[0].toUpperCase() + to.slice(1) : to;
+      return name.slice(0, m.index) + word + name.slice(m.index + from.length);
+    }
+  }
+  return `${name} reversed`;
+}
+
+// The study's rule for siblings: an opposite is the same motif reversed. Pitched layers play in reverse
+// order and every slide or sweep runs the other way, so rising becomes falling. Clicks and air stay put.
+export function oppositePatch(patch) {
+  const pitched = (L) => L.type !== 'noise';
+  const last = Math.max(0, ...patch.layers.filter(pitched).map((L) => L.start));
+  return {
+    ...structuredClone(patch),
+    id: uid(),
+    name: oppositeName(patch.name),
+    layers: patch.layers.map((L) => {
+      const M = { ...structuredClone(L), id: uid() };
+      if (pitched(L)) M.start = Math.round((last - L.start) * 10) / 10;
+      if (L.type === 'tone') Object.assign(M, { pitchStart: L.pitchEnd, pitchEnd: L.pitchStart });
+      if (L.type === 'sample' && L.glide > 0) Object.assign(M, { pitch: L.slideTo, slideTo: L.pitch });
+      if (L.filter.envAmt) M.filter.envAmt = -L.filter.envAmt;
+      return M;
+    }),
+  };
+}
+
 export function blankPatch(name) {
   return patchOf(name, '', [mk('tone', { name: 'Tone', pitchStart: 660, pitchEnd: 660, attack: 1, decay: 120 })], {});
 }
@@ -199,8 +298,9 @@ const LIMITS = {
     trimStart: [0, MAX_CLIP_MS],
     trimEnd: [0, MAX_CLIP_MS],
     pitch: [-24, 24],
-    fadeIn: [0, 200],
-    fadeOut: [0, 500],
+    slideTo: [-24, 24],
+    fadeIn: [0, 300],
+    fadeOut: [0, 3000],
   },
   filter: { freq: [20, 20000], q: [0.1, 20], envAmt: [-6, 6], envTime: [1, 2000] },
   lfo: { rate: [0.1, 80], depth: [0, 1] },

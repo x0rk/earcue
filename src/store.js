@@ -1,42 +1,139 @@
 import { create } from 'zustand';
 import { produce } from 'immer';
-import { APP_SLUG } from './brand.js';
+import { APP_NAME, APP_SLUG } from './brand.js';
 import {
   blankPatch,
   cleanName,
   cloneLayerFresh,
   layerDefaults,
+  oppositePatch,
   MAX_LAYERS,
   MAX_NAME,
   normalizeLayer,
   normalizePatch,
-  presets,
+  starterSounds,
   TYPE_LABEL,
   uid,
   uniqueName,
 } from './engine/model.js';
-import { detectOnsetMs } from './engine/samples.js';
+import { normalizeKey, STARTER_KEY } from './engine/checks.js';
+import { normalizeRoles } from './engine/roles.js';
+import { detectOnsetMs, loadSamples } from './engine/samples.js';
 import { keyLabel } from './lib/keys.js';
 
-const WS_KEY = `${APP_SLUG}:workspace:v1`;
+// Each sound set is saved under its own key, so the home page can list sets without a separate index
+// that two tabs could overwrite.
+const SET_PREFIX = `${APP_SLUG}:set:`;
+const SET_SUFFIX = ':v1';
+const setKey = (id) => `${SET_PREFIX}${id}${SET_SUFFIX}`;
+const META_KEY = `${APP_SLUG}:meta:v1`;
+const LEGACY_WS_KEY = `${APP_SLUG}:workspace:v1`;
 const PREFS_KEY = `${APP_SLUG}:prefs:v1`;
+const STARTER_SET_NAME = 'Starter set';
+const MIGRATED_SET_NAME = 'My sounds';
+const NEW_SET_NAME = 'Untitled set';
 
-function defaultWorkspace() {
-  const sounds = presets();
-  return { sounds, current: sounds[0].id };
+// localStorage can be blocked (private mode) or full. Writes that fail are kept in memory, so the
+// session keeps working; reads prefer that newer copy.
+const memory = new Map();
+const storage = {
+  get(k) {
+    if (memory.has(k)) return memory.get(k);
+    try {
+      return localStorage.getItem(k);
+    } catch {
+      return null;
+    }
+  },
+  set(k, v) {
+    try {
+      localStorage.setItem(k, v);
+      memory.delete(k);
+    } catch {
+      memory.set(k, v);
+    }
+  },
+  remove(k) {
+    memory.delete(k);
+    try {
+      localStorage.removeItem(k);
+    } catch {
+      // Nothing stored, nothing to remove.
+    }
+  },
+  keys() {
+    let keys = [];
+    try {
+      keys = Object.keys(localStorage);
+    } catch {
+      // Blocked storage: only the in-memory copies exist.
+    }
+    return [...new Set([...keys, ...memory.keys()])];
+  },
+};
+
+const readJson = (k) => {
+  try {
+    return JSON.parse(storage.get(k) || 'null');
+  } catch {
+    return null;
+  }
+};
+
+function normalizeSet(raw, id) {
+  if (!raw || !Array.isArray(raw.sounds)) return null;
+  const sounds = raw.sounds.map(normalizePatch).filter(Boolean);
+  if (!sounds.length) return null;
+  const now = Date.now();
+  return {
+    id,
+    name: (typeof raw.name === 'string' && cleanName(raw.name, MAX_NAME)) || NEW_SET_NAME,
+    created: Number.isFinite(raw.created) ? raw.created : now,
+    updated: Number.isFinite(raw.updated) ? raw.updated : now,
+    sounds,
+    current: sounds.some((x) => x.id === raw.current) ? raw.current : sounds[0].id,
+    roles: normalizeRoles(raw.roles, sounds),
+    key: normalizeKey(raw.key),
+  };
 }
 
-function loadWorkspace() {
-  try {
-    const raw = JSON.parse(localStorage.getItem(WS_KEY) || 'null');
-    if (raw && Array.isArray(raw.sounds)) {
-      const sounds = raw.sounds.map(normalizePatch).filter(Boolean);
-      if (sounds.length) return { sounds, current: sounds.some((s) => s.id === raw.current) ? raw.current : sounds[0].id };
-    }
-  } catch {
-    // Corrupt or blocked storage: start from the templates.
-  }
-  return defaultWorkspace();
+export const readSet = (id) => normalizeSet(readJson(setKey(id)), id);
+
+function writeSet(set, updated = Date.now()) {
+  storage.set(setKey(set.id), JSON.stringify({ ...set, updated }));
+}
+
+const setIds = () => storage.keys().filter((k) => k.startsWith(SET_PREFIX) && k.endsWith(SET_SUFFIX)).map((k) => k.slice(SET_PREFIX.length, -SET_SUFFIX.length));
+
+// What the home page shows for each set, most recently edited first.
+export function listSets() {
+  return setIds()
+    .map(readSet)
+    .filter(Boolean)
+    .map(({ id, name, updated, sounds }) => ({ id, name, updated, sounds: sounds.map(({ id: soundId, name: soundName }) => ({ id: soundId, name: soundName })) }))
+    .sort((a, b) => b.updated - a.updated);
+}
+
+// Every sample any saved set uses, so cleaning up stored audio never touches another set's recordings.
+export function sampleIdsInSets() {
+  const ids = new Set();
+  for (const id of setIds()) for (const p of readSet(id)?.sounds || []) for (const L of p.layers) if (L.type === 'sample' && L.sampleId) ids.add(L.sampleId);
+  return ids;
+}
+
+const newSet = (name, sounds, key = null) => ({ id: uid(), name, created: Date.now(), sounds, current: sounds[0].id, roles: {}, key });
+
+// The first visit gets the starter set. A visit from before sets existed also keeps its old sound list
+// as a set of its own.
+function seedSets() {
+  const meta = readJson(META_KEY) || {};
+  if (meta.seeded) return;
+  const legacy = normalizeSet(readJson(LEGACY_WS_KEY), uid());
+  const now = Date.now();
+  writeSet(newSet(STARTER_SET_NAME, starterSounds(), STARTER_KEY), now - 1);
+  if (legacy) writeSet({ ...legacy, name: MIGRATED_SET_NAME }, now);
+  storage.set(META_KEY, JSON.stringify({ ...meta, seeded: true }));
+  if (legacy) storage.remove(LEGACY_WS_KEY);
 }
 
 function loadPrefs() {
@@ -48,21 +145,34 @@ function loadPrefs() {
 }
 
 const prefs = loadPrefs();
-const initialWs = loadWorkspace();
+seedSets();
 const firstLayer = (patch) => (patch.layers[0] ? { kind: 'layer', id: patch.layers[0].id } : { kind: 'output' });
+const urlSetId = () => new URLSearchParams(window.location.search).get('set');
+const initialSetId = urlSetId();
+const initialSet = initialSetId ? readSet(initialSetId) : null;
+const initialSound = initialSet && (initialSet.sounds.find((x) => x.id === initialSet.current) || initialSet.sounds[0]);
+// A comparison with another sound only means something inside the set it was made in.
+const compareFor = (set, compare) =>
+  compare?.kind === 'ref' || (compare?.kind === 'sound' && set?.sounds.some((x) => x.id === compare.id && x.id !== set.current)) ? compare : null;
 
 export const useStore = create(() => ({
-  ws: initialWs,
-  sel: firstLayer(initialWs.sounds.find((s) => s.id === initialWs.current) || initialWs.sounds[0]),
-  compare: prefs.compare ?? { kind: 'sound', id: initialWs.sounds[3]?.id },
+  page: initialSet ? 'set' : 'home',
+  sets: initialSet ? [] : listSets(),
+  ws: initialSet,
+  sel: initialSound ? firstLayer(initialSound) : { kind: 'output' },
+  compare: compareFor(initialSet, prefs.compare),
   refs: Array.isArray(prefs.refs) ? prefs.refs : [],
   view: { start: 0, end: 300, auto: true },
   snap: prefs.snap ?? 1,
   loop: false,
-  dock: ['spectrum', 'mixer', 'code'].includes(prefs.dock) ? prefs.dock : 'spectrum',
+  dock: ['spectrum', 'mixer', 'code', 'checks'].includes(prefs.dock) ? prefs.dock : 'spectrum',
   theme: prefs.theme ?? 'system',
   openMore: prefs.openMore ?? {},
   singleKeys: prefs.singleKeys ?? true,
+  preview: ['split', 'full'].includes(prefs.preview) ? prefs.preview : 'off',
+  previewWidth: Number.isFinite(prefs.previewWidth) ? prefs.previewWidth : 440,
+  micId: typeof prefs.micId === 'string' ? prefs.micId : null,
+  tipDone: prefs.tipDone === true,
   hint: null,
   clipboard: null,
   canUndo: false,
@@ -70,6 +180,7 @@ export const useStore = create(() => ({
   samplesVersion: 0,
   resultsVersion: 0,
   dialog: null,
+  dialogArg: null,
   toast: null,
 }));
 
@@ -82,22 +193,36 @@ export const selectedLayer = (s = get()) =>
 
 // ---------- persistence ----------
 let saveTimer = 0;
+function saveNow() {
+  clearTimeout(saveTimer);
+  saveTimer = 0;
+  const ws = get().ws;
+  if (ws) writeSet(ws);
+}
 function persistWorkspace() {
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => {
-    try {
-      localStorage.setItem(WS_KEY, JSON.stringify(get().ws));
-    } catch {
-      // Storage full or blocked; work continues in memory.
-    }
-  }, 250);
+  saveTimer = setTimeout(saveNow, 250);
 }
+// A pending save is written before the page goes away, so the last edit isn't lost.
+export const flushSave = () => saveTimer && saveNow();
 export function persistPrefs() {
   const s = get();
   try {
     localStorage.setItem(
       PREFS_KEY,
-      JSON.stringify({ compare: s.compare, refs: s.refs, snap: s.snap, dock: s.dock, theme: s.theme, openMore: s.openMore, singleKeys: s.singleKeys }),
+      JSON.stringify({
+        compare: s.compare,
+        refs: s.refs,
+        snap: s.snap,
+        dock: s.dock,
+        theme: s.theme,
+        openMore: s.openMore,
+        singleKeys: s.singleKeys,
+        preview: s.preview,
+        previewWidth: s.previewWidth,
+        micId: s.micId,
+        tipDone: s.tipDone,
+      }),
     );
   } catch {
     // Preferences are a convenience only.
@@ -291,6 +416,13 @@ export function duplicateSound(id) {
   showToast(`Duplicated as ${p.name}.`);
 }
 
+export function addOppositeSound(id) {
+  const src = get().ws.sounds.find((x) => x.id === id);
+  if (!src) return;
+  const p = addSound(oppositePatch(src));
+  showToast(`Made ${p.name}: ${src.name} with its notes and slides reversed.`);
+}
+
 export function deleteSound(id) {
   const s = get();
   if (s.ws.sounds.length < 2) return;
@@ -312,19 +444,6 @@ export function renameSound(id, name) {
     const p = ws.sounds.find((x) => x.id === id);
     if (p) p.name = clean;
   });
-}
-
-export function restoreTemplates() {
-  const names = get().ws.sounds.map((s) => s.name);
-  const missing = presets().filter((p) => !names.includes(p.name));
-  if (!missing.length) {
-    showToast('All templates are already in your list.');
-    return;
-  }
-  edit((ws) => {
-    ws.sounds.push(...missing);
-  });
-  showToast(`Added ${missing.length} template${missing.length > 1 ? 's' : ''}.`);
 }
 
 export function addSampleLayer(sample, { autoTrim = true } = {}) {
@@ -356,8 +475,8 @@ export function showToast(text) {
   toastTimer = setTimeout(() => set({ toast: null }), 2800);
 }
 
-export const openDialog = (dialog) => set({ dialog });
-export const closeDialog = () => set({ dialog: null });
+export const openDialog = (dialog, dialogArg = null) => set({ dialog, dialogArg });
+export const closeDialog = () => set({ dialog: null, dialogArg: null });
 
 export function setView(view) {
   set({ view });
@@ -366,3 +485,138 @@ export function setView(view) {
 export function toggleOpenMore(key, open) {
   setPref({ openMore: { ...get().openMore, [key]: open } });
 }
+
+// ---------- sets ----------
+const setUrl = (id) => (id ? `?set=${encodeURIComponent(id)}` : window.location.pathname);
+
+function sampleIdsOf(set) {
+  const ids = new Set();
+  for (const p of set.sounds) for (const L of p.layers) if (L.type === 'sample' && L.sampleId) ids.add(L.sampleId);
+  return [...ids];
+}
+
+// Each set keeps its own undo history while the page is open, so leaving a set and coming back can
+// still undo what you did there.
+const histories = new Map();
+
+function stashHistory() {
+  if (baseline) commit();
+  const ws = get().ws;
+  if (ws) histories.set(ws.id, { past: [...past], future: [...future] });
+}
+
+export function openSet(id, { push = true } = {}) {
+  stashHistory();
+  flushSave();
+  const data = readSet(id);
+  if (!data) {
+    showToast("That set isn't saved in this browser.");
+    goHome({ push: false, replace: true });
+    return;
+  }
+  const kept = histories.get(id);
+  past.length = 0;
+  past.push(...(kept?.past || []));
+  future = [...(kept?.future || [])];
+  baseline = null;
+  const sound = data.sounds.find((x) => x.id === data.current) || data.sounds[0];
+  set({
+    page: 'set',
+    ws: data,
+    sel: firstLayer(sound),
+    view: { start: 0, end: 300, auto: true },
+    compare: compareFor(data, get().compare),
+    loop: false,
+    dialog: null,
+    dialogArg: null,
+    canUndo: past.length > 0,
+    canRedo: future.length > 0,
+  });
+  if (push) window.history.pushState(null, '', setUrl(id));
+  loadSamples(sampleIdsOf(data)).then((n) => n && bumpSamples());
+}
+
+export function goHome({ push = true, replace = false } = {}) {
+  stashHistory();
+  flushSave();
+  // The open set stays in memory until another one opens, so nothing that reads it ever sees an empty set.
+  set({ page: 'home', sets: listSets(), loop: false, dialog: null, dialogArg: null });
+  if (replace) window.history.replaceState(null, '', setUrl(null));
+  else if (push) window.history.pushState(null, '', setUrl(null));
+}
+
+export const refreshSets = () => get().page === 'home' && set({ sets: listSets() });
+
+// Back and forward move between the home page and sets, like links do.
+export function followUrl() {
+  const id = urlSetId();
+  if (id) openSet(id, { push: false });
+  else goHome({ push: false });
+}
+
+const setNames = () => listSets().map((x) => x.name);
+
+export function createSet(name, start) {
+  const starter = start !== 'blank';
+  const sounds = starter ? starterSounds() : [blankPatch('Untitled sound')];
+  const created = newSet(uniqueName(cleanName(name, MAX_NAME) || NEW_SET_NAME, setNames()), sounds, starter ? STARTER_KEY : null);
+  writeSet(created);
+  openSet(created.id);
+}
+
+// A new set from exported projects, with fresh ids so it never shares sounds with the set it came from.
+export function importSet(name, patches) {
+  const sounds = patches.map((p) => ({ ...p, id: uid(), layers: p.layers.map(cloneLayerFresh) }));
+  const created = newSet(uniqueName(cleanName(name, MAX_NAME) || NEW_SET_NAME, setNames()), sounds);
+  writeSet(created);
+  openSet(created.id);
+  showToast(`Imported ${sounds.length} sound${sounds.length === 1 ? '' : 's'} as ${created.name}.`);
+}
+
+export function renameSet(id, name) {
+  const clean = cleanName(name, MAX_NAME);
+  if (!clean) return;
+  const data = readSet(id);
+  if (!data) return;
+  writeSet({ ...data, name: clean });
+  refreshSets();
+}
+
+export function duplicateSet(id) {
+  const data = readSet(id);
+  if (!data) return;
+  // Fresh ids keep renders and comparisons of the two sets apart; the role choices follow the new ids.
+  const sounds = data.sounds.map((p) => ({ ...p, id: uid(), layers: p.layers.map(cloneLayerFresh) }));
+  const newId = new Map(data.sounds.map((p, i) => [p.id, sounds[i].id]));
+  const roles = Object.fromEntries(Object.entries(data.roles).map(([role, id]) => [role, id && newId.get(id)]));
+  const index = data.sounds.findIndex((x) => x.id === data.current);
+  const copy = { ...newSet(uniqueName(`${data.name} copy`, setNames()), sounds, data.key), current: sounds[Math.max(0, index)].id, roles };
+  writeSet(copy);
+  refreshSets();
+  showToast(`Duplicated as ${copy.name}.`);
+}
+
+export function deleteSet(id) {
+  const data = readSet(id);
+  histories.delete(id);
+  storage.remove(setKey(id));
+  refreshSets();
+  if (data) showToast(`Deleted ${data.name}.`);
+}
+
+export const setTitle = (s) => (s.page === 'set' && s.ws ? `${s.ws.name} · ${APP_NAME}` : APP_NAME);
+
+// ---------- preview ----------
+// Which sound plays for an interaction. null keeps it silent; undefined goes back to matching by name.
+export function setRole(roleId, soundId) {
+  edit((ws) => {
+    ws.roles = { ...ws.roles, [roleId]: soundId };
+    if (soundId === undefined) delete ws.roles[roleId];
+  });
+}
+
+// The key the set's notes should stay in, or null for no key.
+export const setSetKey = (key) => edit((ws) => void (ws.key = key));
+
+export const setPreview = (preview) => setPref({ preview });
+export const setPreviewWidth = (previewWidth) => setPref({ previewWidth: Math.round(previewWidth) });

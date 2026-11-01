@@ -299,9 +299,11 @@ export function setModuleSource(rendered) {
   ].join('\n');
 }
 
+const audioKind = (info) => (info.format === 'ogg' ? 'Ogg Vorbis file' : `${info.bits}-bit WAV`);
+
 export function setReadme(rendered, info, what) {
   const lines = [`A sound set of ${rendered.length}. Made with ${APP_NAME} on ${new Date().toISOString().slice(0, 10)}.`, ''];
-  if (what === 'wav' || what === 'all') lines.push(`wav/        One ${info.channels === 1 ? 'mono' : 'stereo'} ${info.sampleRate} Hz, ${info.bits}-bit WAV per sound.`);
+  if (what === 'audio' || what === 'all') lines.push(`${info.format}/        One ${info.channels === 1 ? 'mono' : 'stereo'} ${info.sampleRate} Hz ${audioKind(info)} per sound.`);
   if (what === 'code' || what === 'all') lines.push("sounds.js   Plays any sound by name with the Web Audio API: playSound('name', audioContext).");
   if (what === 'all' || what === 'project') lines.push(`projects/   The editable projects. Open them again in ${APP_NAME}.`);
   lines.push('', 'Sounds:');
@@ -334,22 +336,22 @@ export function readPatchFile(text) {
 }
 
 export function readme(patch, base, info) {
+  const audio = `${base}.${info.format}`;
   const col = (file) => file.padEnd(base.length + 8);
   return [
     patch.name,
     `Made with ${APP_NAME} on ${new Date().toISOString().slice(0, 10)}.`,
     '',
-    `${col(`${base}.wav`)}${info.channels === 1 ? 'Mono' : 'Stereo'}, ${info.sampleRate} Hz, ${info.bits}-bit. ${info.ms} ms, peak ${patch.master.out} dBFS.`,
+    `${col(audio)}${info.channels === 1 ? 'Mono' : 'Stereo'}, ${info.sampleRate} Hz ${audioKind(info)}. ${info.ms} ms, peak ${patch.master.out} dBFS.`,
     `${col(`${base}.js`)}Plays the same sound with the Web Audio API, with no audio file.`,
     `${col(`${base}.json`)}The editable project. Open it again with Open project in ${APP_NAME}.`,
     '',
-    'Need a smaller file? Convert the WAV:',
-    `  ffmpeg -i ${base}.wav -c:a libopus -b:a 64k ${base}.ogg`,
-    `  ffmpeg -i ${base}.wav -c:a libmp3lame -q:a 2 ${base}.mp3`,
+    'Need an MP3? Convert the audio file:',
+    `  ffmpeg -i ${audio} -c:a libmp3lame -q:a 2 ${base}.mp3`,
     'MP3 encoders can add a few milliseconds of silence at the start. For UI sounds, WAV or OGG keeps the timing tight.',
     '',
     patch.master.variation
-      ? `Natural variation: up to ${patch.master.variation} cents per play. The .js file applies it for you; the WAV does not include it.`
+      ? `Natural variation: up to ${patch.master.variation} cents per play. The .js file applies it for you; the audio file does not include it.`
       : 'Natural variation: off.',
     '',
   ].join('\n');

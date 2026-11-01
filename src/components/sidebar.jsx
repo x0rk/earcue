@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Copy, FileAudio, FolderOpen, GitCompareArrows, Headphones, Mic, MoreHorizontal, Pencil, Plus, RotateCcw, SlidersHorizontal, Trash2, Volume2, VolumeX } from 'lucide-react';
+import { ArrowLeftRight, Copy, FileAudio, FolderOpen, GitCompareArrows, Headphones, Mic, MoreHorizontal, Pencil, Plus, SlidersHorizontal, Trash2, Volume2, VolumeX } from 'lucide-react';
 import { TYPE_BLURB, TYPE_LABEL } from '../engine/model.js';
-import { addLayer, currentSound, deleteSound, duplicateSound, editLayer, openDialog, renameSound, restoreTemplates, select, selectSound, setCompare, useStore } from '../store.js';
+import { addLayer, addOppositeSound, currentSound, deleteSound, duplicateSound, editLayer, openDialog, renameSound, select, selectSound, setCompare, useStore } from '../store.js';
 import { pickAudioFiles, pickProjectFile } from '../io.js';
 import { Button, EditableText, Menu } from './ui.jsx';
 import { LayerIcon } from './icons.jsx';
@@ -69,6 +69,7 @@ function SoundRow({ sound, active, isCompare, canDelete }) {
           // The field mounts after the menu has closed, or the menu's focus trap would pull focus back.
           { label: 'Rename', icon: <Pencil />, keepFocus: true, onSelect: () => requestAnimationFrame(() => setRenaming(true)) },
           { label: 'Duplicate', icon: <Copy />, onSelect: () => duplicateSound(sound.id) },
+          { label: 'Make the opposite', description: 'Notes in reverse, slides the other way', icon: <ArrowLeftRight />, onSelect: () => addOppositeSound(sound.id) },
           { label: 'Compare with this', icon: <GitCompareArrows />, disabled: active, onSelect: () => setCompare({ kind: 'sound', id: sound.id }) },
           'sep',
           { label: 'Delete', icon: <Trash2 />, danger: true, disabled: !canDelete, onSelect: () => deleteSound(sound.id) },
@@ -148,7 +149,7 @@ export function Sidebar() {
   return (
     <aside className="flex min-h-0 flex-col border-r border-line bg-panel [grid-area:left]" aria-label="Sounds and layers">
       <section className="flex max-h-[46%] min-h-0 flex-col border-b border-line">
-        <PaneHead title="Sound set">
+        <PaneHead title="Sounds">
           <Button variant="ghost" size="sm" onClick={() => openDialog('new')}>
             <Plus className="!size-3.5" />
             New
@@ -201,10 +202,6 @@ export function Sidebar() {
         <Button variant="ghost" size="sm" onClick={pickProjectFile} title="Open a .json project file you exported earlier">
           <FolderOpen className="!size-3.5" />
           Open project
-        </Button>
-        <Button variant="ghost" size="sm" onClick={restoreTemplates} title="Add back any templates you deleted">
-          <RotateCcw className="!size-3.5" />
-          Restore templates
         </Button>
       </div>
     </aside>
