@@ -81,20 +81,195 @@ export function driveCurve(amount) {
   return curve;
 }
 
-export function makeImpulse(ctx, seconds, damping, seed) {
+// Each reverb type shapes the same filtered noise: a room fades evenly, a hall darkens as it fades, a
+// plate stays bright and dense, and a spring repeats a short flutter like its coil. Reverse plays the
+// tail backwards, so the reverb swells up.
+export const REVERB_FADE = { room: 2.5, hall: 1.6, plate: 3.2, spring: 2.2 };
+const SPRING_ECHO_S = 0.031;
+const SPRING_ECHO_GAIN = 0.45;
+
+export function makeImpulse(ctx, seconds, damping, seed, type, reverse) {
   const len = Math.max(1, Math.ceil(ctx.sampleRate * seconds));
   const buf = ctx.createBuffer(2, len, ctx.sampleRate);
   const coef = 1 - Math.min(0.97, damping * 0.95);
+  const fade = REVERB_FADE[type] || REVERB_FADE.room;
+  const echo = Math.round(SPRING_ECHO_S * ctx.sampleRate);
   for (let ch = 0; ch < 2; ch++) {
     const d = buf.getChannelData(ch);
     const rnd = mulberry32((seed + ch * 7919) >>> 0);
     let lp = 0;
     for (let i = 0; i < len; i++) {
-      lp += coef * (rnd() * 2 - 1 - lp);
-      d[i] = lp * Math.pow(1 - i / len, 2.5);
+      const p = i / len;
+      const c = type === 'hall' ? coef * (1 - 0.8 * p) + 0.01 : type === 'plate' ? Math.min(1, coef * 1.6) : coef;
+      lp += c * (rnd() * 2 - 1 - lp);
+      d[i] = lp * Math.pow(1 - p, fade);
+      if (type === 'spring' && i >= echo) d[i] += d[i - echo] * SPRING_ECHO_GAIN;
     }
+    if (reverse) d.reverse();
   }
   return buf;
+}
+
+// ---------- effects ----------
+// Built only from the browser's own nodes, so exported code plays them with no libraries. Dynamics
+// use a level detector driving a gain instead of DynamicsCompressorNode, whose 6 ms lookahead would
+// make a UI sound land late.
+const FX_TAIL_S = 0.5;
+const curveSize = 2048;
+
+function rectifierCurve() {
+  const c = new Float32Array(curveSize);
+  for (let i = 0; i < curveSize; i++) c[i] = Math.abs((i / (curveSize - 1)) * 2 - 1);
+  return c;
+}
+
+function gainCurve(thresholdDb, ratio) {
+  const c = new Float32Array(curveSize);
+  const thr = dbToGain(thresholdDb);
+  for (let i = 0; i < curveSize; i++) {
+    const level = Math.abs((i / (curveSize - 1)) * 2 - 1);
+    c[i] = level > thr ? Math.pow(thr / level, 1 - 1 / ratio) : 1;
+  }
+  return c;
+}
+
+export function buildDynamics(ctx, input, thresholdDb, ratio, smoothMs) {
+  const rect = ctx.createWaveShaper();
+  rect.curve = rectifierCurve();
+  const env = ctx.createBiquadFilter();
+  env.type = 'lowpass';
+  env.frequency.value = clampHz(ctx, 1000 / (2 * Math.PI * Math.max(0.1, smoothMs)));
+  env.Q.value = 0.5;
+  const computer = ctx.createWaveShaper();
+  computer.curve = gainCurve(thresholdDb, ratio);
+  const vca = ctx.createGain();
+  vca.gain.value = 0;
+  input.connect(vca);
+  input.connect(rect);
+  rect.connect(env);
+  env.connect(computer);
+  computer.connect(vca.gain);
+  return vca;
+}
+
+function lfoGain(ctx, rate, amount, t, stop) {
+  const o = ctx.createOscillator();
+  o.frequency.value = rate;
+  const g = ctx.createGain();
+  g.gain.value = amount;
+  o.connect(g);
+  o.start(t);
+  o.stop(stop);
+  return g;
+}
+
+function blend(ctx, input, wet, mix, out) {
+  const dry = ctx.createGain();
+  dry.gain.value = 1 - mix / 2;
+  input.connect(dry);
+  dry.connect(out);
+  const w = ctx.createGain();
+  w.gain.value = mix;
+  wet.connect(w);
+  w.connect(out);
+  return out;
+}
+
+function crushCurve(bits) {
+  const steps = Math.pow(2, bits) / 2;
+  const c = new Float32Array(curveSize * 4);
+  for (let i = 0; i < c.length; i++) c[i] = Math.round(((i / (c.length - 1)) * 2 - 1) * steps) / steps;
+  return c;
+}
+
+export function buildEffect(ctx, input, fx, t, stop) {
+  const out = ctx.createGain();
+  if (fx.type === 'eq') {
+    let node = input;
+    for (const [type, freq, gain] of [
+      ['lowshelf', 200, fx.low],
+      ['peaking', fx.midFreq, fx.mid],
+      ['highshelf', 6000, fx.high],
+    ]) {
+      const f = ctx.createBiquadFilter();
+      f.type = type;
+      f.frequency.value = clampHz(ctx, freq);
+      f.Q.value = 1;
+      f.gain.value = gain;
+      node.connect(f);
+      node = f;
+    }
+    node.connect(out);
+    return out;
+  }
+  if (fx.type === 'comp') {
+    const makeup = ctx.createGain();
+    makeup.gain.value = dbToGain(fx.makeup);
+    buildDynamics(ctx, input, fx.threshold, fx.ratio, fx.speed).connect(makeup);
+    return makeup;
+  }
+  if (fx.type === 'chorus') {
+    const wet = ctx.createGain();
+    for (const spread of [1, 1.17]) {
+      const d = ctx.createDelay(0.05);
+      d.delayTime.value = 0.012 * spread;
+      lfoGain(ctx, fx.rate * spread, fx.depth * 0.004, t, stop).connect(d.delayTime);
+      input.connect(d);
+      d.connect(wet);
+    }
+    const half = ctx.createGain();
+    half.gain.value = 0.5;
+    wet.connect(half);
+    return blend(ctx, input, half, fx.mix, out);
+  }
+  if (fx.type === 'flanger') {
+    const d = ctx.createDelay(0.02);
+    d.delayTime.value = 0.002 + fx.depth * 0.003;
+    lfoGain(ctx, fx.rate, fx.depth * 0.0018, t, stop).connect(d.delayTime);
+    const fb = ctx.createGain();
+    fb.gain.value = fx.feedback * 0.9;
+    input.connect(d);
+    d.connect(fb);
+    fb.connect(d);
+    return blend(ctx, input, d, fx.mix, out);
+  }
+  if (fx.type === 'phaser') {
+    const sum = ctx.createGain();
+    input.connect(sum);
+    let node = sum;
+    for (let k = 0; k < 4; k++) {
+      const ap = ctx.createBiquadFilter();
+      ap.type = 'allpass';
+      ap.frequency.value = 900;
+      ap.Q.value = 0.6;
+      lfoGain(ctx, fx.rate, fx.depth * 800, t, stop).connect(ap.frequency);
+      node.connect(ap);
+      node = ap;
+    }
+    // A loop in a Web Audio graph needs a delay in it, even a zero one.
+    const loop = ctx.createDelay(0.01);
+    loop.delayTime.value = 0;
+    const fb = ctx.createGain();
+    fb.gain.value = fx.feedback * 0.7;
+    node.connect(loop);
+    loop.connect(fb);
+    fb.connect(sum);
+    return blend(ctx, input, node, fx.mix, out);
+  }
+  if (fx.type === 'crush') {
+    const ws = ctx.createWaveShaper();
+    ws.curve = crushCurve(fx.bits);
+    input.connect(ws);
+    return blend(ctx, input, ws, fx.mix, out);
+  }
+  input.connect(out);
+  return out;
+}
+
+export function buildEffects(ctx, input, effects, t, end) {
+  let node = input;
+  for (const fx of effects) if (fx.on) node = buildEffect(ctx, node, fx, t, end + FX_TAIL_S);
+  return node;
 }
 
 export function sampleToBuffer(ctx, sample, reverse) {
@@ -290,6 +465,7 @@ export function buildLayer(ctx, bus, L, t, env) {
     node.connect(ws);
     node = ws;
   }
+  if (L.fx && L.fx.length) node = buildEffects(ctx, node, L.fx, t, end);
   let trem = null;
   if (L.lfo.target === 'amp' && L.lfo.depth > 0) {
     trem = ctx.createGain();
@@ -338,6 +514,19 @@ export function buildLayer(ctx, bus, L, t, env) {
   return end;
 }
 
+// The limiter rounds off what rises above the threshold the moment it happens. A limiter that reacts
+// to the level would let a UI sound's first, loudest peak through, and lookahead would make it late.
+function limitCurve(limitDb) {
+  const t = dbToGain(-limitDb);
+  const c = new Float32Array(curveSize * 4);
+  for (let i = 0; i < c.length; i++) {
+    const x = (i / (c.length - 1)) * 2 - 1;
+    const a = Math.abs(x);
+    c[i] = Math.sign(x) * (a <= t ? a : t + (1 - t) * Math.tanh((a - t) / (1 - t)));
+  }
+  return c;
+}
+
 export function buildMaster(ctx, M, seed) {
   const input = ctx.createGain();
   let node = input;
@@ -376,6 +565,17 @@ export function buildMaster(ctx, M, seed) {
     ws.oversample = 'none';
     chain(ws);
   }
+  if (M.limit > 0) {
+    // limitRef is the sound's own peak without the limiter, so the threshold sits below that peak
+    // however loud the layers are before the final level is set.
+    const pre = ctx.createGain();
+    pre.gain.value = 1 / Math.max(1e-6, M.limitRef || 1);
+    chain(pre);
+    const ws = ctx.createWaveShaper();
+    ws.curve = limitCurve(M.limit);
+    ws.oversample = 'none';
+    chain(ws);
+  }
   const output = ctx.createGain();
   node.connect(output);
   let reverb = null;
@@ -386,7 +586,7 @@ export function buildMaster(ctx, M, seed) {
     pre.delayTime.value = M.reverbPredelay / 1000;
     const conv = ctx.createConvolver();
     conv.normalize = true;
-    conv.buffer = makeImpulse(ctx, M.reverbSize, M.reverbDamping, seed);
+    conv.buffer = makeImpulse(ctx, M.reverbSize, M.reverbDamping, seed, M.reverbType, M.reverbReverse);
     const ret = ctx.createGain();
     ret.gain.value = M.reverbMix;
     reverb.connect(pre);

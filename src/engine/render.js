@@ -21,9 +21,16 @@ export function clipMs(L) {
   return [L.start, L.start + L.attack + L.hold + L.decay];
 }
 
+// How long each effect can ring past its layer, from its delay lines and feedback.
+const FX_TAIL_MS = { chorus: 30, flanger: 120, phaser: 60 };
+
 export function estimateLength(patch) {
   let end = 10;
-  for (const L of patch.layers) if (L.on) end = Math.max(end, clipMs(L)[1]);
+  for (const L of patch.layers) {
+    if (!L.on) continue;
+    const tail = Math.max(0, ...(L.fx || []).filter((f) => f.on).map((f) => FX_TAIL_MS[f.type] || 0));
+    end = Math.max(end, clipMs(L)[1] + tail);
+  }
   const M = patch.master;
   let tail = 0;
   if (M.reverbMix > 0) tail += M.reverbSize * 1000 + M.reverbPredelay;
@@ -138,12 +145,32 @@ function finalize(chs, sr, M) {
   return res;
 }
 
-export async function renderPatch(patch, sr) {
+async function renderRaw(patch, sr) {
   const len = Math.max(64, Math.ceil(estimateLength(patch) * sr));
   const oc = new OfflineAudioContext(2, len, sr);
-  scheduleSound(oc, withCleanup(patch), 0, oc.destination, { samples: sampleSource });
+  scheduleSound(oc, patch, 0, oc.destination, { samples: sampleSource });
   const buf = await oc.startRendering();
-  return finalize([buf.getChannelData(0), buf.getChannelData(1)], sr, patch.master);
+  return [buf.getChannelData(0), buf.getChannelData(1)];
+}
+
+// The limiter works against the sound's own peak, which a first pass without it measures. Exported
+// code carries that peak (res.limitRef), so it limits the same way.
+async function withLimitRef(patch, sr) {
+  if (!(patch.master.limit > 0)) return patch;
+  let peak = 0;
+  for (const d of await renderRaw({ ...patch, master: { ...patch.master, limit: 0 } }, sr))
+    for (let i = 0; i < d.length; i++) {
+      const a = Math.abs(d[i]);
+      if (a > peak && a !== Infinity) peak = a;
+    }
+  return { ...patch, master: { ...patch.master, limitRef: peak || 1 } };
+}
+
+export async function renderPatch(patch, sr) {
+  const p = await withLimitRef(withCleanup(patch), sr);
+  const res = finalize(await renderRaw(p, sr), sr, p.master);
+  if (p.master.limitRef) res.limitRef = p.master.limitRef;
+  return res;
 }
 
 export async function renderLayerAlone(L, sr, len) {

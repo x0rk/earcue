@@ -12,6 +12,20 @@ export const TYPE_BLURB = {
 export const uid = () => Math.random().toString(36).slice(2, 10);
 export const randSeed = () => (Math.random() * 2147483647) >>> 0;
 
+// Effects any layer can stack, in order. Each has its defaults and the widest values data may hold.
+export const FX_TYPES = {
+  eq: { label: 'EQ', defaults: { low: 0, mid: 0, midFreq: 1500, high: 0 }, limits: { low: [-18, 12], mid: [-18, 12], midFreq: [200, 8000], high: [-18, 12] } },
+  comp: { label: 'Compressor', defaults: { threshold: -24, ratio: 4, speed: 10, makeup: 0 }, limits: { threshold: [-60, 0], ratio: [1, 20], speed: [1, 200], makeup: [0, 24] } },
+  chorus: { label: 'Chorus', defaults: { rate: 0.8, depth: 0.5, mix: 0.5 }, limits: { rate: [0.05, 8], depth: [0, 1], mix: [0, 1] } },
+  flanger: { label: 'Flanger', defaults: { rate: 0.4, depth: 0.6, feedback: 0.5, mix: 0.5 }, limits: { rate: [0.05, 8], depth: [0, 1], feedback: [0, 0.95], mix: [0, 1] } },
+  phaser: { label: 'Phaser', defaults: { rate: 0.5, depth: 0.6, feedback: 0.3, mix: 0.6 }, limits: { rate: [0.05, 8], depth: [0, 1], feedback: [0, 0.9], mix: [0, 1] } },
+  crush: { label: 'Bitcrusher', defaults: { bits: 6, mix: 1 }, limits: { bits: [1, 16, true], mix: [0, 1] } },
+};
+export const MAX_FX = 6;
+export const REVERB_TYPES = ['room', 'hall', 'plate', 'spring'];
+
+export const fxDefaults = (type) => ({ id: uid(), type, on: true, ...FX_TYPES[type].defaults });
+
 // Clean up settings for audio layers. The gate's bottom value means off; hum is 0 (off), 50 or 60 Hz.
 export const GATE_OFF_DB = -80;
 export const HUM_OPTIONS = [0, 50, 60];
@@ -34,6 +48,7 @@ export function layerDefaults(type) {
     reverbSend: 1,
     delaySend: 1,
     lfo: { target: 'off', rate: 6, depth: 0.3 },
+    fx: [],
     seed: randSeed(),
   };
   if (type === 'tone') {
@@ -85,6 +100,8 @@ export function masterDefaults() {
     reverbSize: 0.3,
     reverbDamping: 0.4,
     reverbPredelay: 0,
+    reverbType: 'room',
+    reverbReverse: false,
     delayMix: 0,
     delayTime: 90,
     delayFeedback: 0.25,
@@ -92,6 +109,7 @@ export function masterDefaults() {
     out: -18,
     fade: 8,
     variation: 0,
+    limit: 0,
   };
 }
 
@@ -351,6 +369,7 @@ const LIMITS = {
     out: [-40, -1],
     fade: [0, 100],
     variation: [0, 100],
+    limit: [0, 12],
   },
 };
 
@@ -375,12 +394,21 @@ function pickKnown(src, base) {
   return out;
 }
 
+function normalizeFx(f) {
+  if (!f || typeof f !== 'object' || !Object.hasOwn(FX_TYPES, f.type)) return null;
+  const base = fxDefaults(f.type);
+  const out = { ...base, ...pickKnown(f, base) };
+  if (typeof f.id === 'string') out.id = f.id;
+  return clampTo(out, FX_TYPES[f.type].limits);
+}
+
 export function normalizeLayer(l) {
   if (!l || !LAYER_TYPES.includes(l.type)) return null;
   const base = layerDefaults(l.type);
   const out = { ...base, ...pickKnown(l, base) };
   out.filter = { ...base.filter, ...pickKnown(l.filter, base.filter) };
   out.lfo = { ...base.lfo, ...pickKnown(l.lfo, base.lfo) };
+  out.fx = Array.isArray(l.fx) ? l.fx.slice(0, MAX_FX).map(normalizeFx).filter(Boolean) : [];
   if (typeof l.id === 'string') out.id = l.id;
   if (l.type === 'sample') {
     out.sampleId = typeof l.sampleId === 'string' ? l.sampleId : null;
@@ -399,6 +427,12 @@ export function normalizeLayer(l) {
 
 export const MAX_NAME = 60;
 
+function normalizeMaster(m) {
+  const out = clampTo({ ...masterDefaults(), ...pickKnown(m, masterDefaults()) }, LIMITS.master);
+  if (!REVERB_TYPES.includes(out.reverbType)) out.reverbType = 'room';
+  return out;
+}
+
 export function normalizePatch(p) {
   if (!p || typeof p !== 'object' || !Array.isArray(p.layers)) return null;
   return {
@@ -407,7 +441,7 @@ export function normalizePatch(p) {
     description: typeof p.description === 'string' ? cleanName(p.description, 160) : '',
     seed: typeof p.seed === 'number' ? p.seed >>> 0 : randSeed(),
     layers: p.layers.slice(0, MAX_LAYERS).map(normalizeLayer).filter(Boolean),
-    master: clampTo({ ...masterDefaults(), ...pickKnown(p.master, masterDefaults()) }, LIMITS.master),
+    master: normalizeMaster(p.master),
   };
 }
 

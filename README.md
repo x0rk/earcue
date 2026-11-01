@@ -42,7 +42,9 @@ Most UI sounds today come from frozen sound packs or from code someone tuned by 
 - Drag a layer's block to move it on the timeline. Drag its dots to set how fast it starts, how loud it is and how long it lasts. Recordings get the same dots, plus trimming and a pitch slide.
 - Clean up a recording: remove background noise (learned from the quiet part before the sound starts), mains hum at 50 or 60 Hz, and room noise between sounds with a gate. The original clip is kept, so every step can be turned back down.
 - Make the opposite of any sound in one step: its notes play in reverse and its slides run the other way, the way Toggle off mirrors Toggle on.
-- Shape it further with filters and sweeps, wobble (vibrato and tremolo), grit, room, echo, tone controls and a loudness target.
+- Shape it further with filters and sweeps, wobble (vibrato and tremolo), grit, echo, tone controls and a loudness target.
+- Stack effects on any layer: EQ, a compressor, chorus, a flanger, a phaser and a bitcrusher, in the order you choose.
+- Put the whole sound in a room, hall, plate or spring reverb, or reverse it so it swells up, and round off peaks with a limiter. None of it adds delay, so sounds still land on time.
 
 <img src="docs/home.png" alt="The home page: a New set card and three sound sets, each listing its sounds as buttons that play them.">
 
