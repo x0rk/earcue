@@ -50,6 +50,7 @@ export function makeNoiseBuffer(ctx, seconds, color, seed) {
   for (let i = 0; i < len; i++) {
     const w = rnd() * 2 - 1;
     if (color === 'pink') {
+      // Paul Kellet's refined pink noise filter.
       b0 = 0.99886 * b0 + w * 0.0555179;
       b1 = 0.99332 * b1 + w * 0.0750759;
       b2 = 0.969 * b2 + w * 0.153852;
@@ -263,7 +264,8 @@ export function buildLayer(ctx, bus, L, t, env) {
   if (L.drive > 0) {
     const ws = ctx.createWaveShaper();
     ws.curve = driveCurve(L.drive);
-    ws.oversample = '4x';
+    // Oversampling delays the output by 2.7 to 4 ms, which makes a tap feel late; the curve is gentle enough without it.
+    ws.oversample = 'none';
     node.connect(ws);
     node = ws;
   }
@@ -350,7 +352,7 @@ export function buildMaster(ctx, M, seed) {
   if (M.drive > 0) {
     const ws = ctx.createWaveShaper();
     ws.curve = driveCurve(M.drive);
-    ws.oversample = '4x';
+    ws.oversample = 'none';
     chain(ws);
   }
   const output = ctx.createGain();
