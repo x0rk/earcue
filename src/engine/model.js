@@ -165,7 +165,7 @@ const LINE_BREAKING = /[\u0000-\u001f\u007f-\u009f\u2028\u2029]/g;
 export const oneLine = (s) => s.replace(LINE_BREAKING, ' ');
 export const cleanName = (s, max) => oneLine(s).trim().slice(0, max);
 
-const MAX_LAYERS = 64;
+export const MAX_LAYERS = 64;
 const MAX_START_MS = 6000; // the longest sound the app renders
 const MAX_CLIP_MS = 600000;
 

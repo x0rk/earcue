@@ -288,8 +288,7 @@ export function RecordDialog() {
         const n = useStore.getState().ws.sounds.reduce((acc, s) => acc + s.layers.filter((l) => /^Recording/.test(l.name)).length, 0) + 1;
         const sample = await decodeToSample(await blob.arrayBuffer(), `Recording ${n}`);
         storeSample(sample);
-        addSampleLayer(sample);
-        showToast('Recording added as a layer. It starts where the sound begins.');
+        if (addSampleLayer(sample)) showToast('Recording added as a layer. It starts where the sound begins.');
         closeDialog();
       } catch {
         setMessage('That recording could not be read. Try again.');

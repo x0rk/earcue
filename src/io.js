@@ -22,7 +22,7 @@ export async function importAudioFiles(files) {
     try {
       const s = await decodeToSample(await f.arrayBuffer(), f.name);
       storeSample(s);
-      addSampleLayer(s);
+      if (!addSampleLayer(s)) return;
       showToast(
         sampleDurationMs(s) > MAX_RENDER_MS
           ? `Added ${f.name}. Only the first ${MAX_RENDER_MS / 1000} seconds of a sound play, so trim it to the part you need.`

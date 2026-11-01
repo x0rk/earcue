@@ -3,8 +3,9 @@ import { cleanName, normalizePatch, oneLine } from './model.js';
 import { samples, floatToB64, b64ToFloat, storeSample } from './samples.js';
 import { APP_NAME, LICENSE_NOTICE } from '../brand.js';
 
-// Letters and digits in any script survive, so "タップ" and "通知" don't both become "sound".
-export const slug = (s) => s.toLowerCase().replace(/[^\p{L}\p{M}\p{N}]+/gu, '-').replace(/^-|-$/g, '') || 'sound';
+// Letters and digits in any script survive, so "タップ" and "通知" don't both become "sound". NFC comes
+// first, so "Café" typed two ways is one name the export can de-duplicate, not two that clash on disk.
+export const slug = (s) => s.normalize('NFC').toLowerCase().replace(/[^\p{L}\p{M}\p{N}]+/gu, '-').replace(/^-|-$/g, '') || 'sound';
 
 // Escaping < keeps a module safe to paste into an HTML <script> tag, where "</script>" would end it.
 const jsLiteral = (v, space) => JSON.stringify(v, null, space).replace(/</g, '\\u003c');

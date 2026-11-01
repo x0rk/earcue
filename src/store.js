@@ -6,6 +6,7 @@ import {
   cleanName,
   cloneLayerFresh,
   layerDefaults,
+  MAX_LAYERS,
   MAX_NAME,
   normalizeLayer,
   normalizePatch,
@@ -192,7 +193,15 @@ export function removeRef(id) {
   setPref({ refs: s.refs.filter((r) => r.id !== id), compare: s.compare?.kind === 'ref' && s.compare.id === id ? null : s.compare });
 }
 
+// Loading keeps at most MAX_LAYERS layers, so adding past it would lose layers on the next reload.
+function roomForLayer() {
+  if (currentSound().layers.length < MAX_LAYERS) return true;
+  showToast(`A sound can have up to ${MAX_LAYERS} layers.`);
+  return false;
+}
+
 export function addLayer(type) {
+  if (!roomForLayer()) return;
   const L = layerDefaults(type);
   editSound((P) => {
     L.name = uniqueName(TYPE_LABEL[type], P.layers.map((x) => x.name));
@@ -202,6 +211,7 @@ export function addLayer(type) {
 }
 
 export function duplicateLayer(id) {
+  if (!roomForLayer()) return;
   const P = currentSound();
   const src = P.layers.find((l) => l.id === id);
   if (!src) return;
@@ -235,7 +245,7 @@ export function copyLayer(id) {
 
 export function pasteLayer() {
   const clip = get().clipboard;
-  if (!clip) return;
+  if (!clip || !roomForLayer()) return;
   const L = normalizeLayer(structuredClone(clip));
   if (!L) return;
   L.id = uid();
@@ -318,6 +328,7 @@ export function restoreTemplates() {
 }
 
 export function addSampleLayer(sample, { autoTrim = true } = {}) {
+  if (!roomForLayer()) return false;
   const L = layerDefaults('sample');
   L.sampleId = sample.id;
   L.sampleName = sample.name;
@@ -327,6 +338,7 @@ export function addSampleLayer(sample, { autoTrim = true } = {}) {
     P.layers.push(L);
   });
   set({ sel: { kind: 'layer', id: L.id }, view: { ...get().view, auto: true }, samplesVersion: get().samplesVersion + 1 });
+  return true;
 }
 
 export function bumpSamples() {
