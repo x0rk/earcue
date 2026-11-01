@@ -23,10 +23,11 @@ export function WaveIcon({ wave }) {
 }
 
 export function LogoMark({ className }) {
+  // The mark is a sound envelope: an instant rise and a long fade, like the handles in the timeline.
   return (
     <svg viewBox="0 0 32 32" className={className} aria-hidden="true">
       <rect width="32" height="32" rx="8" fill="currentColor" />
-      <path d="M6 17h3l2.5-7 4 13 3-9 2 3H26" fill="none" stroke="var(--panel)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M7.4 23 11 8.6C12.3 17.2 16.2 22.1 24.8 23Z" fill="var(--panel)" stroke="var(--panel)" strokeWidth="1.7" strokeLinejoin="round" />
     </svg>
   );
 }
