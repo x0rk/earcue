@@ -165,7 +165,10 @@ function packSamples(patches) {
     for (const use of list.sort((x, y) => x.lo - y.lo)) {
       if (span && use.lo <= span.hi) span.hi = Math.max(span.hi, use.hi);
       else {
-        span = { key: spans.has(id) ? `${id}-${spans.size}` : id, s: use.s, lo: use.lo, hi: use.hi };
+        // A key no other span has, even when a clip's own id looks like a numbered one.
+        let key = id;
+        for (let n = 2; spans.has(key); n += 1) key = `${id}-${n}`;
+        span = { key, s: use.s, lo: use.lo, hi: use.hi };
         spans.set(span.key, span);
       }
       use.span = span;
@@ -274,7 +277,7 @@ export function setModuleSource(rendered) {
   const sounds = {};
   rendered.forEach(({ res, base }, i) => {
     let key = base;
-    for (let n = 2; sounds[key]; n += 1) key = `${base}-${n}`;
+    for (let n = 2; Object.hasOwn(sounds, key); n += 1) key = `${base}-${n}`;
     sounds[key] = soundEntry(patches[i], res);
   });
   const names = Object.keys(sounds);
@@ -291,7 +294,7 @@ export function setModuleSource(rendered) {
     'export const soundNames = Object.keys(SOUNDS);',
     '',
     'export function playSound(name, ctx, destination = ctx.destination, when = ctx.currentTime) {',
-    '  const sound = SOUNDS[name];',
+    '  const sound = Object.prototype.hasOwnProperty.call(SOUNDS, name) ? SOUNDS[name] : null;',
     "  if (!sound) throw new Error(`Unknown sound \"${name}\". Available: ${soundNames.join(', ')}`);",
     '  play(sound, ctx, destination, when);',
     '}',
@@ -329,7 +332,11 @@ export function readPatchFile(text) {
       const s = obj.samples[id];
       if (!s || !Array.isArray(s.channels) || !s.channels.length || !s.channels.every((c) => typeof c === 'string')) continue;
       const rate = Number.isFinite(s.sampleRate) ? Math.min(MAX_SAMPLE_RATE, Math.max(MIN_SAMPLE_RATE, s.sampleRate)) : 48000;
-      storeSample({ id, name: (typeof s.name === 'string' && cleanName(s.name, 120)) || 'Audio', sampleRate: rate, channels: s.channels.slice(0, 2).map(b64ToFloat) });
+      // Channels play side by side, so they are cut to the shortest; audio with an empty channel is left out.
+      const channels = s.channels.slice(0, 2).map(b64ToFloat);
+      const length = Math.min(...channels.map((c) => c.length));
+      if (!length) continue;
+      storeSample({ id, name: (typeof s.name === 'string' && cleanName(s.name, 120)) || 'Audio', sampleRate: rate, channels: channels.map((c) => (c.length > length ? c.slice(0, length) : c)) });
     }
   }
   return patch;

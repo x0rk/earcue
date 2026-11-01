@@ -187,7 +187,7 @@ export function starterSounds() {
     patchOf('Success', 'A task done. Three rising notes, because rising sounds positive.', [
       note('Note 1', NOTE.D6, { decay: 90, level: -4 }),
       note('Note 2', NOTE.F6, { start: 60, decay: 100, level: -2 }),
-      note('Note 3', NOTE.Bb6, { start: 120, decay: 150, fmRatio: 2, fmIndex: 0.3, fmDecay: 60 }),
+      note('Note 3', NOTE.Bb6, { start: 120, decay: 135, fmRatio: 2, fmIndex: 0.3, fmDecay: 60 }),
     ], { ...ROOM, hpf: 250, reverbMix: 0.12, out: DEFAULT }),
     patchOf('Error', 'Something went wrong. Two falling notes with a little edge, never harsh.', [
       note('Note 1', NOTE.G5, { wave: 'square', decay: 70, level: -3, filter: { type: 'lowpass', freq: 2200, q: 0.7 } }),
@@ -262,7 +262,9 @@ export const ENUMS = {
 // Names are written into comments in exported code, so anything that could start a new line goes.
 const LINE_BREAKING = /[\u0000-\u001f\u007f-\u009f\u2028\u2029]/g;
 export const oneLine = (s) => s.replace(LINE_BREAKING, ' ');
-export const cleanName = (s, max) => oneLine(s).trim().slice(0, max);
+// Cuts by characters rather than UTF-16 units, so an emoji at the limit is kept whole, never halved.
+export const clip = (s, max) => (s.length <= max ? s : Array.from(s).slice(0, max).join(''));
+export const cleanName = (s, max) => clip(oneLine(s).trim(), max);
 
 export const MAX_LAYERS = 64;
 const MAX_START_MS = 6000; // the longest sound the app renders
@@ -387,10 +389,11 @@ export function normalizePatch(p) {
 
 // Adds " 2", " 3" and so on, shortening the base so the result still fits in max characters.
 export function uniqueName(base, names, max = MAX_NAME) {
-  if (!names.includes(base)) return base.slice(0, max);
+  const cut = clip(base, max);
+  if (!names.includes(cut)) return cut;
   for (let i = 2; ; i += 1) {
     const suffix = ` ${i}`;
-    const name = `${base.slice(0, max - suffix.length)}${suffix}`;
+    const name = `${clip(base, max - suffix.length)}${suffix}`;
     if (!names.includes(name)) return name;
   }
 }

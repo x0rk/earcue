@@ -17,7 +17,7 @@ export const describeKey = (key) => `${NOTE_NAMES[key.root]} ${SCALES[key.scale]
 export function normalizeKey(raw) {
   if (!raw || typeof raw !== 'object') return null;
   const root = Number.isInteger(raw.root) && raw.root >= 0 && raw.root < 12 ? raw.root : null;
-  return root !== null && SCALES[raw.scale] ? { root, scale: raw.scale } : null;
+  return root !== null && Object.hasOwn(SCALES, raw.scale) ? { root, scale: raw.scale } : null;
 }
 
 const TIER = {

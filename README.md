@@ -100,12 +100,14 @@ Everything runs in your browser. Sets, sounds and recordings are saved in your b
 
 ## Run it locally
 
-You need Node.js 20.19 or later.
+You need Node.js 22.12 or later.
 
 ```bash
 npm install
 npm run dev
 ```
+
+`npm test` runs the test suite.
 
 Microphone recording needs `localhost` or HTTPS.
 

@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { Collapsible, Dialog as RDialog, DropdownMenu, Select as RSelect, Slider, Switch as RSwitch, ToggleGroup, Tooltip as RTooltip } from 'radix-ui';
 import { Check, ChevronDown, ChevronUp, X } from 'lucide-react';
-import { oneLine } from '../engine/model.js';
+import { clip, oneLine } from '../engine/model.js';
 import { commit, setHint, toggleOpenMore, useStore } from '../store.js';
 import { fmtNum } from '../lib/format.js';
 import { keyLabel } from '../lib/keys.js';
@@ -488,7 +488,7 @@ export function NameInput({ label, value, onChange, fallback, max, className }) 
       spellCheck={false}
       value={draft ?? value}
       onChange={(e) => {
-        const v = oneLine(e.target.value).slice(0, max);
+        const v = clip(oneLine(e.target.value), max);
         setDraft(v);
         if (v.trim()) onChange(v);
       }}
