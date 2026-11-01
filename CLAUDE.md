@@ -41,7 +41,9 @@ Vite, React, Radix primitives (`radix-ui`), Tailwind CSS v4, zustand with immer,
 
 - Never push to `main`. The `.husky/pre-push` hook blocks it. Work on a branch named `<type>/<short-description>`, for example `feat/sound-set-export`.
 - Commit messages use `<type>(<scope>): <description>`. Types: `feat`, `fix`, `build`, `chore`, `docs`, `refactor`, `test`, `style`, `perf`, `ci`. Start the description in lowercase.
-- Open PRs with the `/create-pr` command. The title must pass `node .github/scripts/pr-title-check.js "<title>"`, and the body must follow `.github/pull_request_template.md` and pass `node .github/scripts/pr-description-check.js "<body>"`.
+- Open PRs with the `/create-pr` command. The body must follow `.github/pull_request_template.md`. Check the title and body by piping them in through a quoted heredoc (`<<'EOF'`), never as a quoted argument: the shell would run anything in backticks.
+  - `node .github/scripts/pr-title-check.js <<'EOF'` with the title, then `EOF`
+  - `node .github/scripts/pr-description-check.js <<'EOF'` with the body, then `EOF`
 - Merge with squash only. `main` keeps a linear history. Never force-push.
 - Vercel deploys `main` to production and builds a preview for every PR.
 
@@ -50,5 +52,5 @@ Vite, React, Radix primitives (`radix-ui`), Tailwind CSS v4, zustand with immer,
 There is no automated test suite yet. Before opening a PR:
 
 1. Run `npm run build`.
-2. Try the change in `npm run dev`, in both themes.
+2. Try the change in `npm run dev`, in both themes, and with the keyboard alone.
 3. If you touched the engine or export code, export a sound and check that its WAV and its JavaScript module sound the same.

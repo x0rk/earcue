@@ -2,7 +2,7 @@
   <a href="https://earcue.vercel.app">
     <picture>
       <source media="(prefers-color-scheme: dark)" srcset="docs/brand/earcue-mark-dark.svg">
-      <img src="docs/brand/earcue-mark.svg" alt="" width="72" height="72">
+      <img src="docs/brand/earcue-mark.svg" alt="Earcue" width="72" height="72">
     </picture>
   </a>
 </p>
@@ -45,7 +45,7 @@ Most UI sounds today come from frozen sound packs or from code someone tuned by 
 
 - Compare against another sound or any audio file, with overlaid waveforms and frequency charts.
 - Read the measurements side by side: length, start delay, peak, average loudness, brightness and bass.
-- Balance layers in the mixer. Undo anything. Use keyboard shortcuts for everything.
+- Balance layers in the mixer. Undo anything. Use keyboard shortcuts for the common actions.
 
 **Ship**
 
@@ -57,14 +57,20 @@ Most UI sounds today come from frozen sound packs or from code someone tuned by 
 Export the set as **Code**, put `sounds.js` in your project, and play sounds by name:
 
 ```js
-import { playSound, soundNames } from './sounds.js';
+import { playSound } from './sounds.js';
 
-const audio = new AudioContext();
+let audio;
 
-sendButton.addEventListener('click', () => playSound('thock-light', audio));
+sendButton.addEventListener('click', () => {
+  // Browsers only allow sound after a click or key press, so create the AudioContext in one.
+  audio ??= new AudioContext();
+  playSound('thock-light', audio);
+});
 ```
 
-Sounds are stored as recipes and rendered with the Web Audio API, so a set of six sounds packs down to about 7 KB. Browsers only allow sound after a user gesture, so create or resume the `AudioContext` from a click or key press.
+Sounds are stored as recipes and rendered with the Web Audio API, so a set of six sounds is about 32 KB of JavaScript, or about 6 KB once your server compresses it. Audio clips add to that, but only the part of each clip that plays is included.
+
+The playback code in every export comes from Earcue and carries a one-line MIT License notice. Keep it when you ship the file.
 
 ## Export formats
 
@@ -76,13 +82,15 @@ Sounds are stored as recipes and rendered with the Web Audio API, so a set of si
 | Project | A `.json` file you can open in Earcue again or share |
 | Whole set | One WAV per sound, plus a single `sounds.js` |
 
-Earcue imports WAV, MP3, OGG, M4A, AIFF, FLAC and WebM files, as far as your browser can decode them. It exports WAV. If you need smaller files, convert with a tool such as ffmpeg.
+Earcue imports WAV, MP3, OGG, M4A, FLAC and WebM files, and AIFF in Safari, as far as your browser can decode them. It exports WAV. If you need smaller files, convert with a tool such as ffmpeg.
 
 ## Your data
 
-Everything runs in your browser. Sounds and recordings are saved in your browser's storage and are never uploaded. Export a project file to move work to another browser or share it.
+Everything runs in your browser. Sounds and recordings are saved in your browser's storage and are never uploaded. Audio you remove is deleted from that storage the next time you open Earcue. Export a project file to move work to another browser or share it. Project files keep recordings whole, trimmed parts included.
 
 ## Run it locally
+
+You need Node.js 20.19 or later.
 
 ```bash
 npm install
