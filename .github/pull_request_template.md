@@ -33,9 +33,9 @@
 
 
 # Tests to Run for this PR
-- [ ] Unit tests
-- [ ] Integration tests
-- [ ] E2E tests
+- [ ] `npm run build`
+- [ ] Tried in `npm run dev`, in light and dark themes and with the keyboard alone
+- [ ] Exported a sound and checked that its WAV and JavaScript module sound the same (engine or export changes)
 
 
 # Checklist
@@ -43,7 +43,6 @@
 ## Author Checklist
 - [ ] Code follows project conventions
 - [ ] Self-reviewed the diff
-- [ ] Added/updated tests
 - [ ] Documentation updated
 - [ ] No unnecessary debug logs or comments
 

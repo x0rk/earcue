@@ -39,13 +39,8 @@ If there are uncommitted changes:
   - If nothing is staged, run `git add -u` to stage all modified/deleted tracked files.
 - Check for **untracked files** with `git status --porcelain`. Warn the user about any sensitive files (`.env`, credentials, binaries, secrets) — do NOT stage those. For other untracked files, ask the user whether to include them.
 - Draft and create a commit using format `<type>(<scope>): <description>`.
-- If pre-commit hooks fail, fix each failure:
-  - Lint/formatting errors
-  - TypeScript errors
-  - Missing imports
-  - Test failures
-- Verify each fix using the relevant command directly (e.g. lint, type-check, or test command — not by re-running the full commit).
-- Retry the commit once all checks pass (max 2 fix attempts).
+- Run `npm run build` before committing and fix anything it reports. The repo has no pre-commit hooks or automated tests yet.
+- Retry the commit once the build passes (max 2 fix attempts).
 - After fixing, summarize what was broken and what was changed to fix it.
 - If a fix cannot be found after thorough investigation, stop and report to the user.
 
@@ -73,7 +68,13 @@ Read `.github/scripts/pr-title-check.js` to get the exact allowed types and vali
 - Scope: the product area identified from the diff (e.g. `canvas`, `backend`, `auth`, `layout`)
 - Description: concise, lowercase start, min 5 chars
 
-Validate by running: `node .github/scripts/pr-title-check.js "<title>"`
+Validate it through stdin with a quoted heredoc, never as a quoted argument, because the shell would run anything in backticks:
+
+```
+node .github/scripts/pr-title-check.js <<'EOF'
+<title>
+EOF
+```
 
 The title **must pass** before proceeding.
 
@@ -87,11 +88,17 @@ Read `.github/pull_request_template.md` fresh every time. Fill each section:
 - **Breaking Changes**: list any API contracts, schema changes, or behavior changes that affect others. If none, write "None".
 - **Deployment Notes**: list migrations, env vars, feature flags, or infra steps required. If none, write "None".
 - **Media**: if visual changes, include screenshots. If not, write "No visual changes in this PR".
-- **Tests to Run**: keep the complete list of test checkboxes **exactly as they appear in the template**. Do NOT remove, reorder, or abbreviate any entries. Leave all checkboxes **unchecked** — CI handles test selection.
+- **Tests to Run**: keep the complete list of checks **exactly as they appear in the template**. Do NOT remove, reorder, or abbreviate any entries. Tick only the checks you actually ran.
 - **Author Checklist**: keep exactly as in template, all unchecked.
 - **Reviewer Checklist**: keep exactly as in template, all unchecked.
 
-Validate by running: `node .github/scripts/pr-description-check.js "<body>"`
+Validate it the same way:
+
+```
+node .github/scripts/pr-description-check.js <<'EOF'
+<body>
+EOF
+```
 
 ### Step 6: Create or update the PR
 
@@ -111,9 +118,12 @@ Auto-label based on branch prefix:
 
 If the label doesn't exist in the repo, create it first with `gh label create "<label>" --force` before attaching it. If label creation fails, proceed without the label.
 
-Create with:
+Create with the title and body in quoted heredocs, so nothing in them runs:
 ```
-gh pr create --base $BASE --title "<title>" --label "<label>" --body "$(cat <<'EOF'
+gh pr create --base $BASE --label "<label>" --title "$(cat <<'EOF'
+<title>
+EOF
+)" --body "$(cat <<'EOF'
 ...full PR body...
 EOF
 )"
@@ -127,7 +137,10 @@ Compare the `headRefOid` field from `$EXISTING_PR` with the current HEAD SHA (`g
 - If SHAs **differ**: read the existing title and body from `$EXISTING_PR`. Regenerate the title and body from the current diff, but treat all existing PR content as reference. Do not overwrite detailed descriptions, documentation links, media, etc. that are still relevant. Update with:
 
 ```
-gh pr edit <number> --title "<title>" --body "$(cat <<'EOF'
+gh pr edit <number> --title "$(cat <<'EOF'
+<title>
+EOF
+)" --body "$(cat <<'EOF'
 ...full PR body...
 EOF
 )"

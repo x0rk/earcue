@@ -15,22 +15,20 @@ const TEMPLATE_PLACEHOLDERS = [
   'For bugs provide before and after',
 ];
 
-function extractSection(body, header, allHeaders) {
-  const headerIndex = body.indexOf(header);
-  if (headerIndex === -1) return null;
-
-  const contentStart = headerIndex + header.length;
-  let contentEnd = body.length;
-
-  for (const other of allHeaders) {
-    if (other === header) continue;
-    const otherIndex = body.indexOf(other, contentStart);
-    if (otherIndex !== -1 && otherIndex < contentEnd) {
-      contentEnd = otherIndex;
+// A section is the text under its heading, up to the next heading of any level. Matching whole
+// heading lines keeps "# Description" from matching inside "## Description" and the like.
+function extractSection(body, header) {
+  const lines = body.split(/\r?\n/);
+  const start = lines.findIndex((line) => line.trim() === header);
+  if (start === -1) return null;
+  let end = lines.length;
+  for (let i = start + 1; i < lines.length; i++) {
+    if (/^#{1,6}\s/.test(lines[i])) {
+      end = i;
+      break;
     }
   }
-
-  return body.slice(contentStart, contentEnd).trim();
+  return lines.slice(start + 1, end).join('\n').trim();
 }
 
 function isPlaceholder(content) {
@@ -45,11 +43,10 @@ function checkDescription(body) {
     process.exit(1);
   }
 
-  const allHeaders = REQUIRED_SECTIONS.map(s => s.header);
   const errors = [];
 
   for (const section of REQUIRED_SECTIONS) {
-    const content = extractSection(body, section.header, allHeaders);
+    const content = extractSection(body, section.header);
 
     if (content === null) {
       errors.push(`Missing section: "${section.header}"`);
@@ -75,10 +72,17 @@ function checkDescription(body) {
   console.log('PR description is valid.');
 }
 
-const body = process.argv[2];
-if (body === undefined) {
-  console.error('Usage: node pr-description-check.js "<PR body>"');
-  process.exit(1);
+// The body comes in on stdin, so it never passes through the shell, where backticks in it would run.
+function readInput() {
+  const arg = process.argv[2];
+  if (arg !== undefined && arg !== '-') return Promise.resolve(arg);
+  if (process.stdin.isTTY) return Promise.resolve('');
+  return new Promise((resolve) => {
+    let data = '';
+    process.stdin.setEncoding('utf8');
+    process.stdin.on('data', (chunk) => (data += chunk));
+    process.stdin.on('end', () => resolve(data));
+  });
 }
 
-checkDescription(body);
+readInput().then(checkDescription);

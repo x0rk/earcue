@@ -40,10 +40,25 @@ function checkTitle(title) {
   console.log(`PR title is valid: ${type}(${scope}): ${description}`);
 }
 
-const title = process.argv[2];
-if (!title) {
-  console.error('Usage: node pr-title-check.js "<PR title>"');
-  process.exit(1);
+// The title comes in on stdin, so it never passes through the shell, where backticks in it would run.
+// A single argument still works for quick checks of plain titles.
+function readInput() {
+  const arg = process.argv[2];
+  if (arg !== undefined && arg !== '-') return Promise.resolve(arg);
+  if (process.stdin.isTTY) return Promise.resolve('');
+  return new Promise((resolve) => {
+    let data = '';
+    process.stdin.setEncoding('utf8');
+    process.stdin.on('data', (chunk) => (data += chunk));
+    process.stdin.on('end', () => resolve(data));
+  });
 }
 
-checkTitle(title);
+readInput().then((input) => {
+  const title = input.trim();
+  if (!title) {
+    console.error("Usage: node pr-title-check.js <<'EOF'   (then the title, then EOF)");
+    process.exit(1);
+  }
+  checkTitle(title);
+});
