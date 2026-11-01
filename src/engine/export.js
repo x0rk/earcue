@@ -1,5 +1,6 @@
 import engineSource from './engine.js?raw';
 import { cleanName, normalizePatch, oneLine } from './model.js';
+import { lookupSample, withCleanup } from './cleanup.js';
 import { samples, floatToB64, b64ToFloat, storeSample } from './samples.js';
 import { APP_NAME, LICENSE_NOTICE } from '../brand.js';
 
@@ -138,12 +139,14 @@ function usedSampleData(patch) {
 
 // Code exports carry only the part of each clip that plays, so audio trimmed away in the editor never
 // ships in someone's app. Each layer's trims shift to match the shorter clip, so it sounds the same.
-function packSamples(patches) {
+// Cleaned layers ship their cleaned audio.
+function packSamples(sources) {
+  const patches = sources.map(withCleanup);
   const uses = new Map();
   const byClip = new Map();
   patches.forEach((p, pi) =>
     p.layers.forEach((L, li) => {
-      const s = L.type === 'sample' && samples.get(L.sampleId);
+      const s = L.type === 'sample' && lookupSample(L.sampleId);
       if (!s) return;
       const n = s.channels[0].length;
       const a = (Math.max(0, L.trimStart) / 1000) * s.sampleRate;

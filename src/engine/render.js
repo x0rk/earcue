@@ -1,4 +1,6 @@
 import { dbToGain, buildLayer, sampleRates, scheduleSound, slideDuration } from './engine.js';
+import { sampleSource, withCleanup } from './cleanup.js';
+import { fft } from './fft.js';
 import { samples, sampleDurationMs } from './samples.js';
 
 const MAX_RENDER_S = 6;
@@ -31,46 +33,6 @@ export function estimateLength(patch) {
     tail = Math.max(tail, M.delayTime * (repeats + 1));
   }
   return Math.min(MAX_RENDER_S, (end + tail + 40) / 1000);
-}
-
-function fft(re, im) {
-  const n = re.length;
-  for (let i = 1, j = 0; i < n; i++) {
-    let bit = n >> 1;
-    for (; j & bit; bit >>= 1) j ^= bit;
-    j ^= bit;
-    if (i < j) {
-      let t = re[i];
-      re[i] = re[j];
-      re[j] = t;
-      t = im[i];
-      im[i] = im[j];
-      im[j] = t;
-    }
-  }
-  for (let len = 2; len <= n; len <<= 1) {
-    const ang = (-2 * Math.PI) / len;
-    const wr = Math.cos(ang);
-    const wi = Math.sin(ang);
-    const half = len >> 1;
-    for (let i = 0; i < n; i += len) {
-      let cr = 1;
-      let ci = 0;
-      for (let k = 0; k < half; k++) {
-        const a = i + k;
-        const b = a + half;
-        const br = re[b] * cr - im[b] * ci;
-        const bi = re[b] * ci + im[b] * cr;
-        re[b] = re[a] - br;
-        im[b] = im[a] - bi;
-        re[a] += br;
-        im[a] += bi;
-        const ncr = cr * wr - ci * wi;
-        ci = cr * wi + ci * wr;
-        cr = ncr;
-      }
-    }
-  }
 }
 
 function spectrumOf(data, sr) {
@@ -179,7 +141,7 @@ function finalize(chs, sr, M) {
 export async function renderPatch(patch, sr) {
   const len = Math.max(64, Math.ceil(estimateLength(patch) * sr));
   const oc = new OfflineAudioContext(2, len, sr);
-  scheduleSound(oc, patch, 0, oc.destination, { samples });
+  scheduleSound(oc, withCleanup(patch), 0, oc.destination, { samples: sampleSource });
   const buf = await oc.startRendering();
   return finalize([buf.getChannelData(0), buf.getChannelData(1)], sr, patch.master);
 }
@@ -188,7 +150,7 @@ export async function renderLayerAlone(L, sr, len) {
   const oc = new OfflineAudioContext(2, len, sr);
   const input = oc.createGain();
   input.connect(oc.destination);
-  buildLayer(oc, { input, reverb: null, delay: null }, { ...L, on: true }, L.start / 1000, { samples });
+  buildLayer(oc, { input, reverb: null, delay: null }, { ...L, on: true }, L.start / 1000, { samples: sampleSource });
   const b = await oc.startRendering();
   const a = b.getChannelData(0);
   const c = b.getChannelData(1);
@@ -205,6 +167,6 @@ export async function renderWithLayers(patch, sr) {
   const res = await renderPatch(patch, sr);
   const len = Math.max(64, Math.ceil(estimateLength(patch) * sr));
   res.layers = new Map();
-  for (const L of patch.layers) res.layers.set(L.id, await renderLayerAlone(L, sr, len));
+  for (const L of withCleanup(patch).layers) res.layers.set(L.id, await renderLayerAlone(L, sr, len));
   return res;
 }

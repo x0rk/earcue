@@ -26,6 +26,8 @@ Vite, React, Radix primitives (`radix-ui`), Tailwind CSS v4, zustand with immer,
 - `src/engine/samples.js` keeps decoded audio for audio layers and persists it to IndexedDB.
 - `src/engine/export.js` writes WAV and zip files, generates the JavaScript modules and reads and writes project files.
 - `src/engine/ogg.js` encodes OGG files. Import it dynamically so the encoder stays out of the main bundle.
+- `src/engine/cleanup.js` cleans recordings: noise reduction, hum removal and a gate. It runs once on the clip and caches the cleaned copy by the layer's settings; renders and exports go through `withCleanup(patch)` and `lookupSample(id)`, so cleaned layers play and export their cleaned audio while the stored clip stays untouched.
+- `src/engine/fft.js` is the FFT shared by the spectrum and clean up.
 - `src/store.js` is the app state: the sound sets, the open set, selection, preferences, undo and redo, and persistence to localStorage. Each set is saved under its own key, `earcue:set:<id>:v1`, and the URL (`?set=<id>`) says which set is open.
 - `src/playback.js` schedules offline renders and plays results in real time.
 - `src/components/ui.jsx` holds the design-system primitives built on Radix: `Scrub` (the slider field), `Segmented`, `SwitchRow`, `Section`, `Select`, `Menu`, `Dialog`, `Tip` and `Button`.

@@ -1,6 +1,8 @@
 import { createElement } from 'react';
-import { ArrowDown, ArrowUp, Copy, Dices, Download, Info, Trash2 } from 'lucide-react';
-import { MAX_NAME, TYPE_LABEL, randSeed } from '../engine/model.js';
+import { ArrowDown, ArrowUp, Copy, Dices, Download, Info, Play, Trash2 } from 'lucide-react';
+import { GATE_OFF_DB, MAX_NAME, TYPE_LABEL, randSeed } from '../engine/model.js';
+import { noiseLeadMs } from '../engine/cleanup.js';
+import { playSample } from '../playback.js';
 import { clipMs, MAX_RENDER_MS } from '../engine/render.js';
 import { samples, sampleDurationMs } from '../engine/samples.js';
 import { fmtHz, fmtHzUnit, fmtPan, fmtSigned, hzToNote } from '../lib/format.js';
@@ -118,6 +120,50 @@ function LayerInspector({ L }) {
             {layerField(L, 'trimStart', { label: 'Trim start', min: 0, max: Math.max(1, totalMs), ...ms, hint: 'Cuts time off the beginning of the audio. New audio is trimmed to where the sound begins.' })}
             {layerField(L, 'trimEnd', { label: 'Trim end', min: 0, max: Math.max(1, totalMs), ...ms, hint: 'Cuts time off the end of the audio.' })}
             <SwitchRow label="Play backwards" checked={L.reverse} onChange={(v) => editLayer(L.id, (d) => void (d.reverse = v))} hint="Reverses the audio. Trims apply to the reversed clip." />
+          </Section>
+          <Section id="cleanup" title="Clean up">
+            {layerField(L, 'denoise', {
+              label: 'Remove noise',
+              min: 0,
+              max: 1,
+              step: 0.01,
+              format: (v) => (v > 0 ? `${Math.round(v * 100)}%` : 'Off'),
+              hint: 'Takes out steady background noise like hiss, fans and room tone. It learns the noise from the quiet part before the sound starts. Higher removes more but can sound watery. Audio people call this noise reduction.',
+            })}
+            <Segmented
+              label="Hum"
+              value={L.hum}
+              hint="Removes the low buzz of mains power and its overtones. It hums at 50 Hz in most of Europe, Asia, Africa and Australia, and at 60 Hz in the Americas."
+              onChange={(v) => editLayer(L.id, (d) => void (d.hum = v))}
+              options={[
+                { value: 0, label: 'Off' },
+                { value: 50, label: '50 Hz' },
+                { value: 60, label: '60 Hz' },
+              ]}
+            />
+            {layerField(L, 'gate', {
+              label: 'Gate',
+              min: GATE_OFF_DB,
+              max: -20,
+              step: 0.5,
+              digits: 1,
+              unit: 'dB',
+              format: (v) => (v <= GATE_OFF_DB ? 'Off' : v.toFixed(1)),
+              hint: 'Silences everything quieter than this, measured below the loudest moment, like room noise between taps. Too high cuts off quiet tails. Audio people call this a noise gate.',
+            })}
+            {sample && L.denoise > 0 && (
+              <p className="px-0.5 text-[12px] text-muted">
+                {noiseLeadMs(sample) > 0
+                  ? `Learns the noise from the first ${Math.round(noiseLeadMs(sample))} ms, before the sound starts.`
+                  : 'There is little quiet before the sound starts, so it learns the noise from the quietest moments.'}
+              </p>
+            )}
+            {sample && (
+              <Button variant="ghost" size="sm" className="self-start" onClick={() => playSample(sample)}>
+                <Play className="!size-3.5" />
+                Play the original clip
+              </Button>
+            )}
           </Section>
           <Section id="shape" title="Shape">
             {layerField(L, 'start', { label: 'Starts at', min: 0, max: 1000, ...ms, hint: 'When this layer begins, counted from the start of the sound.' })}
