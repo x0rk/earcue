@@ -1,5 +1,5 @@
 import { dbToGain, buildLayer, sampleRates, scheduleSound, slideDuration } from './engine.js';
-import { sampleSource, withCleanup } from './cleanup.js';
+import { lookupSample, sampleSource, withCleanup } from './cleanup.js';
 import { fft } from './fft.js';
 import { samples, sampleDurationMs } from './samples.js';
 
@@ -8,8 +8,9 @@ export const MAX_RENDER_MS = MAX_RENDER_S * 1000;
 const TAIL_THRESHOLD = 0.001; // -60 dB below peak: where the file is trimmed
 const AUDIBLE_THRESHOLD = 0.01; // -40 dB below peak: what counts as audible
 
+// Looks the clip up through clean up too, since renders measure layers that point at cleaned copies.
 export function sampleClipMs(L) {
-  const s = samples.get(L.sampleId);
+  const s = lookupSample(L.sampleId);
   if (!s) return 20;
   const { r0, r1, g } = sampleRates(L);
   return slideDuration(Math.max(1, sampleDurationMs(s) - L.trimStart - L.trimEnd) / 1000, r0, r1, g) * 1000;
@@ -21,9 +22,16 @@ export function clipMs(L) {
   return [L.start, L.start + L.attack + L.hold + L.decay];
 }
 
+// How long each effect can ring past its layer, from its delay lines and feedback.
+const FX_TAIL_MS = { chorus: 30, flanger: 120, phaser: 60 };
+
 export function estimateLength(patch) {
   let end = 10;
-  for (const L of patch.layers) if (L.on) end = Math.max(end, clipMs(L)[1]);
+  for (const L of patch.layers) {
+    if (!L.on) continue;
+    const tail = Math.max(0, ...(L.fx || []).filter((f) => f.on).map((f) => FX_TAIL_MS[f.type] || 0));
+    end = Math.max(end, clipMs(L)[1] + tail);
+  }
   const M = patch.master;
   let tail = 0;
   if (M.reverbMix > 0) tail += M.reverbSize * 1000 + M.reverbPredelay;
@@ -138,12 +146,32 @@ function finalize(chs, sr, M) {
   return res;
 }
 
-export async function renderPatch(patch, sr) {
+async function renderRaw(patch, sr) {
   const len = Math.max(64, Math.ceil(estimateLength(patch) * sr));
   const oc = new OfflineAudioContext(2, len, sr);
-  scheduleSound(oc, withCleanup(patch), 0, oc.destination, { samples: sampleSource });
+  scheduleSound(oc, patch, 0, oc.destination, { samples: sampleSource });
   const buf = await oc.startRendering();
-  return finalize([buf.getChannelData(0), buf.getChannelData(1)], sr, patch.master);
+  return [buf.getChannelData(0), buf.getChannelData(1)];
+}
+
+// The limiter works against the sound's own peak, which a first pass without it measures. Exported
+// code carries that peak (res.limitRef), so it limits the same way.
+async function withLimitRef(patch, sr) {
+  if (!(patch.master.limit > 0)) return patch;
+  let peak = 0;
+  for (const d of await renderRaw({ ...patch, master: { ...patch.master, limit: 0 } }, sr))
+    for (let i = 0; i < d.length; i++) {
+      const a = Math.abs(d[i]);
+      if (a > peak && a !== Infinity) peak = a;
+    }
+  return { ...patch, master: { ...patch.master, limitRef: peak || 1 } };
+}
+
+export async function renderPatch(patch, sr) {
+  const p = await withLimitRef(withCleanup(patch), sr);
+  const res = finalize(await renderRaw(p, sr), sr, p.master);
+  if (p.master.limitRef) res.limitRef = p.master.limitRef;
+  return res;
 }
 
 export async function renderLayerAlone(L, sr, len) {

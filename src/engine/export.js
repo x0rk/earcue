@@ -243,13 +243,14 @@ function runtimeSource() {
   ].join('\n');
 }
 
+// A sound that uses the limiter carries the peak it was measured against, so it limits like the app.
 const soundEntry = (patch, res) => ({
   name: patch.name,
   gain: res ? Number(res.gain.toPrecision(6)) : 1,
   length: res ? Number(res.duration.toFixed(4)) : 0.2,
   fade: patch.master.fade / 1000,
   variation: patch.master.variation || 0,
-  patch,
+  patch: res?.limitRef ? { ...patch, master: { ...patch.master, limitRef: Number(res.limitRef.toPrecision(6)) } } : patch,
 });
 
 export function moduleSource(patch, res, { abbreviateSamples = false } = {}) {

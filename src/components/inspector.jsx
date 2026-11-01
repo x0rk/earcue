@@ -1,6 +1,6 @@
 import { createElement } from 'react';
-import { ArrowDown, ArrowUp, Copy, Dices, Download, Info, Play, Trash2 } from 'lucide-react';
-import { GATE_OFF_DB, MAX_NAME, TYPE_LABEL, randSeed } from '../engine/model.js';
+import { ArrowDown, ArrowUp, Copy, Dices, Download, Info, Play, Plus, Power, Trash2, X } from 'lucide-react';
+import { FX_TYPES, fxDefaults, GATE_OFF_DB, MAX_FX, MAX_NAME, TYPE_LABEL, randSeed } from '../engine/model.js';
 import { noiseLeadMs } from '../engine/cleanup.js';
 import { playSample } from '../playback.js';
 import { clipMs, MAX_RENDER_MS } from '../engine/render.js';
@@ -19,7 +19,7 @@ import {
   selectedLayer,
   useStore,
 } from '../store.js';
-import { Button, IconButton, NameInput, Scrub, Section, Segmented, SwitchRow } from './ui.jsx';
+import { Button, IconButton, Menu, NameInput, Scrub, Section, Segmented, SwitchRow } from './ui.jsx';
 import { LayerIcon, WaveIcon } from './icons.jsx';
 import { focusSelectedRow } from './sidebar.jsx';
 
@@ -32,6 +32,109 @@ const layerField = (L, key, props) => field(key, L[key], (v) => editLayer(L.id, 
 const filterField = (L, key, props) => field(`filter-${key}`, L.filter[key], (v) => editLayer(L.id, (d) => void (d.filter[key] = v), false), props);
 const lfoField = (L, key, props) => field(`lfo-${key}`, L.lfo[key], (v) => editLayer(L.id, (d) => void (d.lfo[key] = v), false), props);
 const masterField = (M, key, props) => field(key, M[key], (v) => editMaster((d) => void (d[key] = v), false), props);
+const editFx = (L, fx, fn, shouldCommit) =>
+  editLayer(
+    L.id,
+    (d) => {
+      const f = d.fx.find((x) => x.id === fx.id);
+      if (f) fn(f, d);
+    },
+    shouldCommit,
+  );
+const fxField = (L, fx, key, props) => field(`${fx.id}-${key}`, fx[key], (v) => editFx(L, fx, (f) => void (f[key] = v), false), props);
+const pct = { min: 0, max: 1, step: 0.01, format: (v) => `${Math.round(v * 100)}%` };
+const dbGain = { min: -18, max: 12, step: 0.1, digits: 1, unit: 'dB', bipolar: true, format: (v) => fmtSigned(v, 1) };
+
+const FX_BLURB = {
+  eq: 'Lows, mids and highs',
+  comp: 'Evens out loud and quiet parts',
+  chorus: 'Thickens with drifting copies',
+  flanger: 'A sweeping jet-plane whoosh',
+  phaser: 'A swirling, hollow sweep',
+  crush: 'Lo-fi, crunchy, retro',
+};
+
+function fxControls(L, fx) {
+  if (fx.type === 'eq')
+    return [
+      fxField(L, fx, 'low', { label: 'Lows', ...dbGain, hint: 'Boosts or cuts everything below about 200 Hz.' }),
+      fxField(L, fx, 'mid', { label: 'Mids', ...dbGain, hint: 'Boosts or cuts a band around Mid frequency.' }),
+      fxField(L, fx, 'midFreq', { label: 'Mid frequency', min: 200, max: 8000, log: true, format: fmtHz, unit: 'Hz', hint: 'Where the Mids control acts.' }),
+      fxField(L, fx, 'high', { label: 'Highs', ...dbGain, hint: 'Boosts or cuts everything above about 6 kHz.' }),
+    ];
+  if (fx.type === 'comp')
+    return [
+      fxField(L, fx, 'threshold', { label: 'Threshold', min: -60, max: 0, step: 0.5, digits: 1, unit: 'dB', hint: 'Above this level the layer gets turned down.' }),
+      fxField(L, fx, 'ratio', { label: 'Ratio', min: 1, max: 20, step: 0.1, digits: 1, unit: ':1', hint: 'How hard loud parts are turned down. 2 is gentle, 10 is heavy.' }),
+      fxField(L, fx, 'speed', { label: 'Speed', min: 1, max: 200, log: true, step: 0.5, digits: 1, unit: 'ms', hint: 'How fast it follows the level. Short catches clicks; long keeps the hit and squeezes the tail.' }),
+      fxField(L, fx, 'makeup', { label: 'Make-up', min: 0, max: 24, step: 0.1, digits: 1, unit: 'dB', hint: 'Adds volume back after compressing.' }),
+    ];
+  const rate = fxField(L, fx, 'rate', { label: 'Speed', min: 0.05, max: 8, log: true, step: 0.01, digits: 2, unit: 'Hz', hint: 'How fast the effect moves.' });
+  const depth = fxField(L, fx, 'depth', { label: 'Depth', ...pct, hint: 'How far the effect moves.' });
+  const mix = fxField(L, fx, 'mix', { label: 'Mix', ...pct, hint: 'How much of the effect you hear against the clean layer.' });
+  if (fx.type === 'chorus') return [rate, depth, mix];
+  if (fx.type === 'flanger' || fx.type === 'phaser')
+    return [rate, depth, fxField(L, fx, 'feedback', { label: 'Feedback', ...pct, max: FX_TYPES[fx.type].limits.feedback[1], hint: 'Feeds the effect back into itself for a sharper, ringing sweep.' }), mix];
+  return [
+    fxField(L, fx, 'bits', { label: 'Bits', min: 1, max: 16, step: 1, hint: 'Fewer bits sound grittier, like old game consoles. 16 is clean.' }),
+    mix,
+  ];
+}
+
+function EffectCard({ L, fx, index }) {
+  const move = (dir) =>
+    editLayer(L.id, (d) => {
+      const [f] = d.fx.splice(index, 1);
+      d.fx.splice(index + dir, 0, f);
+    });
+  return (
+    <div className={`flex flex-col gap-1.5 rounded-lg border border-line p-1.5 ${fx.on ? '' : 'opacity-60'}`}>
+      <div className="flex items-center gap-0.5 pl-1">
+        <span className="flex-1 text-[12.5px] font-medium">{FX_TYPES[fx.type].label}</span>
+        <IconButton label={fx.on ? `Turn ${FX_TYPES[fx.type].label} off` : `Turn ${FX_TYPES[fx.type].label} on`} size="iconSm" aria-pressed={fx.on} className={fx.on ? '!text-accent' : ''} onClick={() => editFx(L, fx, (f) => void (f.on = !f.on))}>
+          <Power />
+        </IconButton>
+        <IconButton label="Move up" size="iconSm" disabled={index === 0} onClick={() => move(-1)}>
+          <ArrowUp />
+        </IconButton>
+        <IconButton label="Move down" size="iconSm" disabled={index === L.fx.length - 1} onClick={() => move(1)}>
+          <ArrowDown />
+        </IconButton>
+        <IconButton label={`Remove ${FX_TYPES[fx.type].label}`} size="iconSm" onClick={() => editLayer(L.id, (d) => void d.fx.splice(index, 1))}>
+          <X />
+        </IconButton>
+      </div>
+      {fxControls(L, fx)}
+    </div>
+  );
+}
+
+function EffectsSection({ L }) {
+  const add = (type) => editLayer(L.id, (d) => void d.fx.push(fxDefaults(type)));
+  return (
+    <Section
+      id="effects"
+      title="Effects"
+      action={
+        <Menu
+          trigger={
+            <Button variant="ghost" size="sm" disabled={L.fx.length >= MAX_FX} aria-label="Add an effect">
+              <Plus className="!size-3.5" />
+              Add
+            </Button>
+          }
+          items={Object.entries(FX_TYPES).map(([type, t]) => ({ label: t.label, description: FX_BLURB[type], onSelect: () => add(type) }))}
+        />
+      }
+    >
+      {L.fx.length ? (
+        L.fx.map((fx, i) => <EffectCard key={fx.id} L={L} fx={fx} index={i} />)
+      ) : (
+        <p className="px-0.5 text-[12px] text-muted">Stack EQ, a compressor, chorus, a flanger, a phaser or a bitcrusher on this layer. They run top to bottom.</p>
+      )}
+    </Section>
+  );
+}
 
 const ms = { unit: 'ms', step: 0.1, digits: 1 };
 
@@ -432,6 +535,8 @@ function LayerInspector({ L }) {
         )}
       </Section>
 
+      <EffectsSection L={L} />
+
       <Section
         id="mix"
         title="Mix"
@@ -526,9 +631,22 @@ function OutputInspector() {
         more={[
           masterField(M, 'reverbDamping', { label: 'Darkness', min: 0, max: 1, step: 0.01, digits: 2, hint: 'How muffled the room sounds. Higher is softer, like a carpeted room.' }),
           masterField(M, 'reverbPredelay', { label: 'Gap', min: 0, max: 100, step: 0.5, digits: 1, unit: 'ms', hint: 'A short pause before the room kicks in. Keeps the start of the sound crisp. (Pre-delay)' }),
+          <SwitchRow key="reverse" label="Reverse the room" checked={M.reverbReverse} onChange={(v) => editMaster((d) => void (d.reverbReverse = v))} hint="Plays the reverb backwards, so it swells up instead of fading away." />,
         ]}
       >
         {masterField(M, 'reverbMix', { label: 'Amount', min: 0, max: 1, step: 0.01, digits: 2, format: (v) => (v > 0 ? v.toFixed(2) : 'Off'), hint: 'Adds the sound of a space around it. A little makes a UI sound feel less dry. (Reverb)' })}
+        <Segmented
+          label="Type"
+          value={M.reverbType}
+          hint="Room fades evenly. Hall is bigger and darkens as it fades. Plate is bright and dense. Spring adds the metallic flutter of a spring reverb."
+          onChange={(v) => editMaster((d) => void (d.reverbType = v))}
+          options={[
+            { value: 'room', label: 'Room' },
+            { value: 'hall', label: 'Hall' },
+            { value: 'plate', label: 'Plate' },
+            { value: 'spring', label: 'Spring' },
+          ]}
+        />
         {masterField(M, 'reverbSize', { label: 'Size', min: 0.05, max: 3, log: true, step: 0.01, digits: 2, unit: 's', hint: 'How big the space is. Small rooms suit UI sounds best.' })}
       </Section>
       <Section
@@ -556,6 +674,16 @@ function OutputInspector() {
         }
       >
         {masterField(M, 'drive', { label: 'Warmth', min: 0, max: 1, step: 0.01, digits: 2, hint: 'Gentle saturation on the whole sound. Makes it feel fuller and more solid.' })}
+        {masterField(M, 'limit', {
+          label: 'Limiter',
+          min: 0,
+          max: 12,
+          step: 0.5,
+          digits: 1,
+          unit: 'dB',
+          format: (v) => (v > 0 ? v.toFixed(1) : 'Off'),
+          hint: 'Rounds off the loudest peaks, starting this far below them, so the whole sound can be louder at the same peak level. It adds no delay, so the sound still lands on time. Past a few dB it starts to sound crunchy.',
+        })}
         <SwitchRow
           label="Even out loud and quiet parts"
           checked={M.compOn}
