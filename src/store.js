@@ -3,8 +3,10 @@ import { produce } from 'immer';
 import { APP_SLUG } from './brand.js';
 import {
   blankPatch,
+  cleanName,
   cloneLayerFresh,
   layerDefaults,
+  MAX_NAME,
   normalizeLayer,
   normalizePatch,
   presets,
@@ -13,6 +15,7 @@ import {
   uniqueName,
 } from './engine/model.js';
 import { detectOnsetMs } from './engine/samples.js';
+import { keyLabel } from './lib/keys.js';
 
 const WS_KEY = `${APP_SLUG}:workspace:v1`;
 const PREFS_KEY = `${APP_SLUG}:prefs:v1`;
@@ -58,6 +61,7 @@ export const useStore = create(() => ({
   dock: ['spectrum', 'mixer', 'code'].includes(prefs.dock) ? prefs.dock : 'spectrum',
   theme: prefs.theme ?? 'system',
   openMore: prefs.openMore ?? {},
+  singleKeys: prefs.singleKeys ?? true,
   hint: null,
   clipboard: null,
   canUndo: false,
@@ -90,7 +94,10 @@ function persistWorkspace() {
 export function persistPrefs() {
   const s = get();
   try {
-    localStorage.setItem(PREFS_KEY, JSON.stringify({ compare: s.compare, refs: s.refs, snap: s.snap, dock: s.dock, theme: s.theme, openMore: s.openMore }));
+    localStorage.setItem(
+      PREFS_KEY,
+      JSON.stringify({ compare: s.compare, refs: s.refs, snap: s.snap, dock: s.dock, theme: s.theme, openMore: s.openMore, singleKeys: s.singleKeys }),
+    );
   } catch {
     // Preferences are a convenience only.
   }
@@ -166,9 +173,9 @@ export function select(sel) {
 export function selectSound(id) {
   const s = get();
   if (id === s.ws.current) return;
-  edit((ws) => {
-    ws.current = id;
-  });
+  // Switching sounds is navigation, not an edit, so it stays out of undo and redo.
+  set({ ws: { ...s.ws, current: id } });
+  persistWorkspace();
   const cur = currentSound();
   const compare = s.compare?.kind === 'sound' && s.compare.id === id ? null : s.compare;
   set({ sel: firstLayer(cur), view: { ...s.view, auto: true }, compare });
@@ -177,6 +184,12 @@ export function selectSound(id) {
 
 export function setCompare(compare) {
   setPref({ compare });
+}
+
+// Removes a comparison file from the list. Its stored audio is deleted the next time the app opens.
+export function removeRef(id) {
+  const s = get();
+  setPref({ refs: s.refs.filter((r) => r.id !== id), compare: s.compare?.kind === 'ref' && s.compare.id === id ? null : s.compare });
 }
 
 export function addLayer(type) {
@@ -210,7 +223,7 @@ export function deleteLayer(id) {
   });
   const next = currentSound().layers[Math.min(i, currentSound().layers.length - 1)];
   set({ sel: next ? { kind: 'layer', id: next.id } : { kind: 'output' } });
-  showToast(`Deleted ${name}. Press ⌘Z to undo.`);
+  showToast(`Deleted ${name}. Press ${keyLabel('⌘Z')} to undo.`);
 }
 
 export function copyLayer(id) {
@@ -279,13 +292,15 @@ export function deleteSound(id) {
   });
   set({ sel: firstLayer(currentSound()), view: { ...get().view, auto: true } });
   if (s.compare?.kind === 'sound' && s.compare.id === id) setCompare(null);
-  showToast(`Deleted ${name}. Press ⌘Z to undo.`);
+  showToast(`Deleted ${name}. Press ${keyLabel('⌘Z')} to undo.`);
 }
 
 export function renameSound(id, name) {
+  const clean = cleanName(name, MAX_NAME);
+  if (!clean) return;
   edit((ws) => {
     const p = ws.sounds.find((x) => x.id === id);
-    if (p && name.trim()) p.name = name.trim().slice(0, 60);
+    if (p) p.name = clean;
   });
 }
 

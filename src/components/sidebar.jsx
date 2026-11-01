@@ -1,10 +1,24 @@
 import { useState } from 'react';
-import { Copy, Eye, EyeOff, FileAudio, FolderOpen, GitCompareArrows, Headphones, Mic, MoreHorizontal, Pencil, Plus, RotateCcw, SlidersHorizontal, Trash2 } from 'lucide-react';
+import { Copy, FileAudio, FolderOpen, GitCompareArrows, Headphones, Mic, MoreHorizontal, Pencil, Plus, RotateCcw, SlidersHorizontal, Trash2, Volume2, VolumeX } from 'lucide-react';
 import { TYPE_BLURB, TYPE_LABEL } from '../engine/model.js';
 import { addLayer, currentSound, deleteSound, duplicateSound, editLayer, openDialog, renameSound, restoreTemplates, select, selectSound, setCompare, useStore } from '../store.js';
 import { pickAudioFiles, pickProjectFile } from '../io.js';
 import { Button, EditableText, Menu } from './ui.jsx';
 import { LayerIcon } from './icons.jsx';
+
+// After a layer is duplicated or deleted, the control that did it may be gone, so focus moves to
+// the selected row instead of falling back to the page.
+export function focusSelectedRow() {
+  requestAnimationFrame(() => {
+    const active = document.activeElement;
+    if (active && active !== document.body) return;
+    const sel = useStore.getState().sel;
+    document.querySelector(`[data-layer-row="${sel?.kind === 'layer' ? sel.id : 'output'}"]`)?.focus();
+  });
+}
+
+// A mouse click shouldn't leave focus on the row, or Space would press the row again instead of playing.
+const releaseMouseFocus = (e) => e.detail > 0 && e.currentTarget.blur();
 
 function PaneHead({ title, children }) {
   return (
@@ -31,8 +45,12 @@ function SoundRow({ sound, active, isCompare, canDelete }) {
       ) : (
         <button
           type="button"
+          aria-current={active ? 'true' : undefined}
           className={`flex h-full min-w-0 flex-1 items-center gap-2 rounded-lg px-2.5 text-left text-[13px] ${active ? 'font-medium text-ink' : 'text-ink/85'}`}
-          onClick={() => selectSound(sound.id)}
+          onClick={(e) => {
+            selectSound(sound.id);
+            releaseMouseFocus(e);
+          }}
           onDoubleClick={() => setRenaming(true)}
           title={sound.description || 'Double-click to rename'}
         >
@@ -47,7 +65,7 @@ function SoundRow({ sound, active, isCompare, canDelete }) {
           </Button>
         }
         items={[
-          { label: 'Rename', icon: <Pencil />, onSelect: () => setRenaming(true) },
+          { label: 'Rename', icon: <Pencil />, keepFocus: true, onSelect: () => setRenaming(true) },
           { label: 'Duplicate', icon: <Copy />, onSelect: () => duplicateSound(sound.id) },
           { label: 'Compare with this', icon: <GitCompareArrows />, disabled: active, onSelect: () => setCompare({ kind: 'sound', id: sound.id }) },
           'sep',
@@ -61,11 +79,20 @@ function SoundRow({ sound, active, isCompare, canDelete }) {
 function LayerRow({ L, selected, dimmed }) {
   return (
     <div className={`group flex h-8 items-center gap-0.5 rounded-lg pr-1 ${selected ? 'bg-accent-soft' : 'hover:bg-field'}`}>
-      <button type="button" className="flex h-full min-w-0 flex-1 items-center gap-2 rounded-lg pl-6 pr-2 text-left text-[13px]" onClick={() => select({ kind: 'layer', id: L.id })}>
+      <button
+        type="button"
+        data-layer-row={L.id}
+        aria-current={selected ? 'true' : undefined}
+        className="flex h-full min-w-0 flex-1 items-center gap-2 rounded-lg pl-6 pr-2 text-left text-[13px]"
+        onClick={(e) => {
+          select({ kind: 'layer', id: L.id });
+          releaseMouseFocus(e);
+        }}
+      >
         <span className="grid size-[18px] shrink-0 place-items-center rounded-[5px] text-panel" style={{ background: `var(--c-${L.type})`, opacity: dimmed ? 0.45 : 1 }}>
           <LayerIcon type={L.type} className="size-3" />
         </span>
-        <span className={`truncate ${dimmed ? 'text-faint' : 'text-ink'}`}>{L.name}</span>
+        <span className={`truncate ${dimmed ? 'text-muted' : 'text-ink'}`}>{L.name}</span>
       </button>
       <Button
         variant="ghost"
@@ -87,7 +114,7 @@ function LayerRow({ L, selected, dimmed }) {
         className={!L.on ? 'opacity-100' : selected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 focus-visible:opacity-100'}
         onClick={() => editLayer(L.id, (d) => void (d.on = !d.on))}
       >
-        {L.on ? <Eye /> : <EyeOff />}
+        {L.on ? <Volume2 /> : <VolumeX />}
       </Button>
     </div>
   );
@@ -145,7 +172,17 @@ export function Sidebar() {
         </PaneHead>
         <div className="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2">
           <div className={`flex h-8 items-center rounded-lg ${sel?.kind === 'output' ? 'bg-accent-soft' : 'hover:bg-field'}`}>
-            <button type="button" className="flex h-full flex-1 items-center gap-2 rounded-lg px-2.5 text-left text-[13px] font-medium" onClick={() => select({ kind: 'output' })} title="Settings for the whole sound">
+            <button
+              type="button"
+              data-layer-row="output"
+              aria-current={sel?.kind === 'output' ? 'true' : undefined}
+              className="flex h-full flex-1 items-center gap-2 rounded-lg px-2.5 text-left text-[13px] font-medium"
+              onClick={(e) => {
+                select({ kind: 'output' });
+                releaseMouseFocus(e);
+              }}
+              title="Settings for the whole sound"
+            >
               <span className="grid size-[18px] place-items-center rounded-[5px] bg-ink text-panel">
                 <SlidersHorizontal className="size-3" />
               </span>
@@ -165,7 +202,7 @@ export function Sidebar() {
         </Button>
         <Button variant="ghost" size="sm" onClick={restoreTemplates} title="Add back any templates you deleted">
           <RotateCcw className="!size-3.5" />
-          Templates
+          Restore templates
         </Button>
       </div>
     </aside>

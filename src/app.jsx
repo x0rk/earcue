@@ -18,7 +18,7 @@ import {
   useStore,
 } from './store.js';
 import { TopBar } from './components/top-bar.jsx';
-import { Sidebar } from './components/sidebar.jsx';
+import { Sidebar, focusSelectedRow } from './components/sidebar.jsx';
 import { Timeline, TimelineBar, fitTimeline, zoomBy } from './components/timeline.jsx';
 import { Inspector } from './components/inspector.jsx';
 import { Dock, MetricsBar } from './components/dock.jsx';
@@ -37,6 +37,11 @@ function isTyping(el) {
   const tag = el?.tagName;
   return (tag === 'INPUT' && !['range', 'checkbox', 'radio', 'button'].includes(el.type)) || tag === 'TEXTAREA' || tag === 'SELECT' || el?.isContentEditable;
 }
+
+// Single-key shortcuts stay out of the way of controls that use keys themselves, like sliders and
+// menus, and they can be turned off in the shortcuts dialog (WCAG 2.1.4).
+const KEY_WIDGETS = '[role="slider"],[role="radio"],[role="menu"],[role="menuitem"],[role="listbox"],[role="option"],[role="switch"],[role="tab"],[role="combobox"]';
+const ownsKeys = (el) => !!el?.closest?.(KEY_WIDGETS);
 
 function useShortcuts() {
   useEffect(() => {
@@ -61,8 +66,10 @@ function useShortcuts() {
       const L = selectedLayer(s);
       if (mod && key === 'd') {
         e.preventDefault();
-        if (L) duplicateLayer(L.id);
-        else duplicateSound(s.ws.current);
+        if (L) {
+          duplicateLayer(L.id);
+          focusSelectedRow();
+        } else duplicateSound(s.ws.current);
         return;
       }
       if (mod && key === 'c') {
@@ -78,16 +85,22 @@ function useShortcuts() {
       }
       if (mod || e.altKey) return;
       if (e.key === ' ') {
-        if (e.target.tagName === 'BUTTON' || e.target.getAttribute?.('role') === 'slider') return;
+        // Space plays from anywhere it has no job of its own. Buttons, switches and the like keep it.
+        const role = e.target.getAttribute?.('role');
+        if (e.target.tagName === 'BUTTON' || (role && role !== 'slider')) return;
         e.preventDefault();
         playCurrent();
-      } else if (key === 'b') playCompare();
+        return;
+      }
+      if (!s.singleKeys || ownsKeys(e.target)) return;
+      if (key === 'b') playCompare();
       else if (key === 'l') setLoop(!s.loop);
       else if (key === 'm' && L) editLayer(L.id, (d) => void (d.on = !d.on));
       else if (key === 's' && L) editLayer(L.id, (d) => void (d.solo = !d.solo));
       else if ((e.key === 'Backspace' || e.key === 'Delete') && L) {
         e.preventDefault();
         deleteLayer(L.id);
+        focusSelectedRow();
       } else if (e.key === 'Escape') select({ kind: 'output' });
       else if (e.key === '=' || e.key === '+') zoomBy(1.5);
       else if (e.key === '-') zoomBy(1 / 1.5);
@@ -135,16 +148,16 @@ function useFileDrop() {
   return over;
 }
 
+// The status region stays mounted, because screen readers only announce text that changes inside one.
 function Toast() {
   const toast = useStore((s) => s.toast);
-  if (!toast) return null;
   return (
-    <div
-      key={toast.id}
-      role="status"
-      className="fixed bottom-[calc(20px+env(safe-area-inset-bottom,0px))] left-1/2 z-50 max-w-[calc(100vw-32px)] -translate-x-1/2 rounded-xl bg-ink px-4 py-2.5 text-[13px] text-panel shadow-pop animate-pop-in"
-    >
-      {toast.text}
+    <div role="status" className="pointer-events-none fixed bottom-[calc(20px+env(safe-area-inset-bottom,0px))] left-1/2 z-50 max-w-[calc(100vw-32px)] -translate-x-1/2">
+      {toast && (
+        <div key={toast.id} className="rounded-xl bg-ink px-4 py-2.5 text-[13px] text-panel shadow-pop animate-pop-in">
+          {toast.text}
+        </div>
+      )}
     </div>
   );
 }

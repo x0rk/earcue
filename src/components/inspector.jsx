@@ -1,6 +1,7 @@
 import { createElement } from 'react';
 import { ArrowDown, ArrowUp, Copy, Dices, Download, Info, Trash2 } from 'lucide-react';
-import { TYPE_LABEL, randSeed } from '../engine/model.js';
+import { MAX_NAME, TYPE_LABEL, randSeed } from '../engine/model.js';
+import { clipMs, MAX_RENDER_MS } from '../engine/render.js';
 import { samples, sampleDurationMs } from '../engine/samples.js';
 import { fmtHz, fmtHzUnit, fmtPan, fmtSigned, hzToNote } from '../lib/format.js';
 import {
@@ -16,8 +17,9 @@ import {
   selectedLayer,
   useStore,
 } from '../store.js';
-import { Button, IconButton, Scrub, Section, Segmented, SwitchRow } from './ui.jsx';
+import { Button, IconButton, NameInput, Scrub, Section, Segmented, SwitchRow } from './ui.jsx';
 import { LayerIcon, WaveIcon } from './icons.jsx';
+import { focusSelectedRow } from './sidebar.jsx';
 
 // Field helpers bind a scrub field to a layer or the output without repeating the plumbing.
 function field(key, value, set, props) {
@@ -31,17 +33,18 @@ const masterField = (M, key, props) => field(key, M[key], (v) => editMaster((d) 
 
 const ms = { unit: 'ms', step: 0.1, digits: 1 };
 
+// Visual only: each control also carries its hint as an accessible description.
 function HintBar() {
   const hint = useStore((s) => s.hint);
   return (
-    <div className="sticky bottom-0 z-10 mt-auto border-t border-line bg-panel-2 px-3 py-2.5" aria-live="polite">
+    <div className="sticky bottom-0 z-10 mt-auto border-t border-line bg-panel-2 px-3 py-2.5" aria-hidden="true">
       {hint ? (
         <p className="text-[12px] leading-snug text-muted">
           <span className="font-semibold text-ink">{hint.label}. </span>
           {hint.text}
         </p>
       ) : (
-        <p className="flex items-center gap-1.5 text-[12px] text-faint">
+        <p className="flex items-center gap-1.5 text-[12px] text-muted">
           <Info className="size-3.5" />
           Point at any control to see what it does.
         </p>
@@ -54,17 +57,11 @@ function Header({ children }) {
   return <div className="sticky top-0 z-10 flex min-h-12 items-center gap-2 border-b border-line bg-panel px-3">{children}</div>;
 }
 
-function NameInput({ value, onChange, label }) {
-  return (
-    <input
-      aria-label={label}
-      value={value}
-      onChange={(e) => onChange(e.target.value, false)}
-      onBlur={() => commit()}
-      onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-      className="min-w-0 flex-1 rounded-md border border-transparent bg-transparent px-1.5 py-1 text-[14px] font-semibold tracking-tight hover:border-line focus:border-accent focus:outline-none"
-    />
-  );
+const HEADER_NAME = 'flex-1 text-[14px] font-semibold tracking-tight';
+
+function TooLongNote({ L }) {
+  if (clipMs(L)[1] <= MAX_RENDER_MS) return null;
+  return <p className="px-0.5 text-[12px] text-hot">Only the first {MAX_RENDER_MS / 1000} seconds of a sound play. Trim this layer or start it earlier.</p>;
 }
 
 function LayerInspector({ L }) {
@@ -79,17 +76,33 @@ function LayerInspector({ L }) {
         <span className="grid size-6 shrink-0 place-items-center rounded-md text-panel" style={{ background: `var(--c-${L.type})` }}>
           <LayerIcon type={L.type} className="size-3.5" />
         </span>
-        <NameInput label="Layer name" value={L.name} onChange={(v) => editLayer(L.id, (d) => void (d.name = v.slice(0, 40) || TYPE_LABEL[L.type]), false)} />
+        <NameInput label="Layer name" value={L.name} max={40} fallback={TYPE_LABEL[L.type]} className={HEADER_NAME} onChange={(v) => editLayer(L.id, (d) => void (d.name = v), false)} />
         <IconButton label="Move up" size="iconSm" disabled={index <= 0} onClick={() => moveLayer(L.id, -1)}>
           <ArrowUp />
         </IconButton>
         <IconButton label="Move down" size="iconSm" disabled={index >= P.layers.length - 1} onClick={() => moveLayer(L.id, 1)}>
           <ArrowDown />
         </IconButton>
-        <IconButton label="Duplicate layer" shortcut="⌘D" size="iconSm" onClick={() => duplicateLayer(L.id)}>
+        <IconButton
+          label="Duplicate layer"
+          shortcut="⌘D"
+          size="iconSm"
+          onClick={() => {
+            duplicateLayer(L.id);
+            focusSelectedRow();
+          }}
+        >
           <Copy />
         </IconButton>
-        <IconButton label="Delete layer" shortcut="⌫" size="iconSm" onClick={() => deleteLayer(L.id)}>
+        <IconButton
+          label="Delete layer"
+          shortcut="⌫"
+          size="iconSm"
+          onClick={() => {
+            deleteLayer(L.id);
+            focusSelectedRow();
+          }}
+        >
           <Trash2 />
         </IconButton>
       </Header>
@@ -123,6 +136,7 @@ function LayerInspector({ L }) {
             format: (v) => fmtSigned(v, 2),
             hint: 'Plays the audio higher or lower, in semitones. Like a tape, higher also makes it shorter.',
           })}
+          <TooLongNote L={L} />
         </Section>
       ) : (
         <Section
@@ -147,6 +161,7 @@ function LayerInspector({ L }) {
             ...ms,
             hint: 'How long the layer takes to die away. Short feels tight and dry; long rings on. Audio people call this decay.',
           })}
+          <TooLongNote L={L} />
         </Section>
       )}
 
@@ -385,7 +400,7 @@ function OutputInspector() {
   return (
     <>
       <Header>
-        <NameInput label="Sound name" value={P.name} onChange={(v) => editSound((d) => void (d.name = v.slice(0, 60) || 'Untitled'), false)} />
+        <NameInput label="Sound name" value={P.name} max={MAX_NAME} fallback="Untitled" className={HEADER_NAME} onChange={(v) => editSound((d) => void (d.name = v), false)} />
         <span className="rounded-full border border-line px-2 py-0.5 text-[11px] text-muted">Whole sound</span>
       </Header>
       <Section
@@ -490,7 +505,8 @@ export function Inspector() {
   useStore((s) => s.samplesVersion);
   const L = useStore((s) => selectedLayer(s));
   return (
-    <aside className="flex min-h-0 flex-col overflow-y-auto border-l border-line bg-panel [grid-area:right]" aria-label="Properties">
+    // The scroll padding keeps a focused control clear of the sticky hint bar at the bottom.
+    <aside className="flex min-h-0 scroll-pb-24 scroll-pt-14 flex-col overflow-y-auto border-l border-line bg-panel [grid-area:right]" aria-label="Properties">
       {L ? <LayerInspector key={L.id} L={L} /> : <OutputInspector />}
       <HintBar />
     </aside>

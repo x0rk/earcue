@@ -250,7 +250,7 @@ function draw(canvas, wrap, playheadMs) {
     g.fill();
     g.globalAlpha = 1;
     g.font = `600 11.5px ${font}`;
-    label(fit(L.name, HEADER_W - 40), 28, ln.y + 18, audible ? c.ink : c.faint);
+    label(fit(L.name, HEADER_W - 40), 28, ln.y + 18, audible ? c.ink : c.muted);
     const state = !L.on ? 'Muted' : L.solo ? 'Solo' : anySolo ? 'Not soloed' : TYPE_LABEL[L.type];
     label(state, 28, ln.y + 36, L.solo ? c.hot : c.muted, 400);
   }
@@ -540,7 +540,9 @@ export function TimelineBar() {
         <Plus />
       </IconButton>
       <Select size="sm" label="Snap to grid" className="w-[118px] shrink-0" value={String(snap)} onChange={(v) => setPref({ snap: Number(v) })} groups={[{ items: SNAP_OPTIONS }]} />
-      <p className="ml-2 hidden min-w-0 truncate text-[12px] text-muted lg:block">{tip}</p>
+      <p className="ml-2 min-w-0 text-[12px] leading-tight text-muted line-clamp-2 max-lg:hidden" title={tip}>
+        {tip}
+      </p>
     </div>
   );
 }

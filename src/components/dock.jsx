@@ -3,7 +3,7 @@ import { Slider, Tabs } from 'radix-ui';
 import { Copy } from 'lucide-react';
 import { dbToGain } from '../engine/engine.js';
 import { moduleSource } from '../engine/export.js';
-import { fmtDb, fmtHz, fmtHzUnit, fmtPan } from '../lib/format.js';
+import { fmtHz, fmtHzUnit, fmtLevel, fmtPan } from '../lib/format.js';
 import { comparePatch, results } from '../playback.js';
 import { commit, currentSound, editLayer, editMaster, select, setPref, showToast, useStore } from '../store.js';
 import { Button, hintProps } from './ui.jsx';
@@ -47,7 +47,7 @@ function drawSpectrum(canvas) {
     const y = Math.round(yAtDb(db)) + 0.5;
     g.fillStyle = col('line');
     g.fillRect(padL, y, W - padL - padR, 1);
-    g.fillStyle = col('faint');
+    g.fillStyle = col('muted');
     g.fillText(String(db), 6, y);
   }
   let lastX = -99;
@@ -151,7 +151,8 @@ function VFader({ label, value, min, max, onChange }) {
       step={0.1}
       value={[value]}
       onValueChange={([v]) => onChange(v)}
-      onValueCommit={() => commit()}
+      // Radix commits keyboard steps before it reports the new value, so wait for the change.
+      onValueCommit={() => queueMicrotask(commit)}
       className="relative flex h-[96px] w-6 touch-none select-none justify-center"
     >
       <Slider.Track className="relative w-1.5 grow overflow-hidden rounded-full bg-field">
@@ -171,7 +172,8 @@ function PanSlider({ label, value, onChange, onReset }) {
       step={0.01}
       value={[value]}
       onValueChange={([v]) => onChange(Math.abs(v) < 0.03 ? 0 : v)}
-      onValueCommit={() => commit()}
+      // Radix commits keyboard steps before it reports the new value, so wait for the change.
+      onValueCommit={() => queueMicrotask(commit)}
       onDoubleClick={onReset}
       title={`Left / right: ${fmtPan(value)}. Double-click to center.`}
       className="relative flex h-4 w-16 touch-none select-none items-center"
@@ -189,7 +191,7 @@ function Meter({ linear, color, title }) {
   const db = 20 * Math.log10(linear || 1e-9);
   const pct = Math.max(0, Math.min(100, ((db + 60) / 60) * 100));
   return (
-    <div className="relative h-[96px] w-1.5 overflow-hidden rounded-full bg-field" title={title ?? `${fmtDb(db)} dBFS peak`}>
+    <div className="relative h-[96px] w-1.5 overflow-hidden rounded-full bg-field" title={title ?? `Peak: ${fmtLevel(db, 'dBFS')}`}>
       <div className="absolute inset-x-0 bottom-0 rounded-full" style={{ height: `${pct}%`, background: color }} />
     </div>
   );
@@ -208,10 +210,10 @@ function Mixer() {
         return (
           <div key={L.id} className={`flex w-[92px] shrink-0 flex-col items-center gap-1 rounded-xl border p-1.5 [&>*]:shrink-0 ${selected ? 'border-accent bg-accent-soft/40' : 'border-line bg-panel-2'}`}>
             <button type="button" className="flex w-full items-center justify-center gap-1 truncate text-[12px] font-medium" onClick={() => select({ kind: 'layer', id: L.id })}>
-              <LayerIcon type={L.type} className="size-3 shrink-0" />
-              <span className="truncate" style={{ color: `var(--c-${L.type})` }}>
-                {L.name}
+              <span className="shrink-0" style={{ color: `var(--c-${L.type})` }}>
+                <LayerIcon type={L.type} className="size-3" />
               </span>
+              <span className="truncate">{L.name}</span>
             </button>
             <div className="flex items-end gap-1.5" {...hintProps('Volume', 'Drag the fader to set how loud this layer is. The bar beside it shows how loud it actually peaks.')}>
               <VFader label={`${L.name} volume`} value={L.level} min={-48} max={6} onChange={(v) => editLayer(L.id, (d) => void (d.level = Math.round(v * 10) / 10), false)} />
@@ -223,6 +225,7 @@ function Mixer() {
               <button
                 type="button"
                 aria-pressed={!L.on}
+                aria-label={`Mute ${L.name}`}
                 title="Mute"
                 className={`h-5 w-6 rounded border font-mono text-[10px] font-semibold ${!L.on ? 'border-accent bg-accent text-accent-ink' : 'border-line bg-panel text-muted'}`}
                 onClick={() => editLayer(L.id, (d) => void (d.on = !d.on))}
@@ -232,6 +235,7 @@ function Mixer() {
               <button
                 type="button"
                 aria-pressed={L.solo}
+                aria-label={`Solo ${L.name}`}
                 title="Solo"
                 className={`h-5 w-6 rounded border font-mono text-[10px] font-semibold ${L.solo ? 'border-hot bg-hot text-panel' : 'border-line bg-panel text-muted'}`}
                 onClick={() => editLayer(L.id, (d) => void (d.solo = !d.solo))}
@@ -251,7 +255,7 @@ function Mixer() {
           <Meter linear={res ? dbToGain(res.m.peakDb) : 0} color="var(--ink)" />
         </div>
         <span className="font-mono text-[11px] text-muted tabular">{`${P.master.out.toFixed(1)} dBFS`}</span>
-        <span className="text-[11px] text-faint">peak</span>
+        <span className="text-[11px] text-muted">peak</span>
       </div>
     </div>
   );
@@ -340,8 +344,8 @@ export function Dock() {
 const METRICS = [
   { key: 'audibleMs', label: 'Length', fmt: (v) => `${Math.round(v)} ms`, hint: 'How long you can hear the sound, down to 40 dB below its peak. Most UI sounds are under 200 ms.' },
   { key: 'onsetMs', label: 'Starts after', fmt: (v) => `${v.toFixed(1)} ms`, hint: 'Silence before the sound begins. For taps and clicks this should be close to 0 so the sound lands with the action.' },
-  { key: 'peakDb', label: 'Peak', fmt: (v) => `${fmtDb(v)} dB`, hint: 'The loudest point, in dBFS. Set it with Loudness on Output.' },
-  { key: 'rmsDb', label: 'Average', fmt: (v) => `${fmtDb(v)} dB`, hint: 'Average loudness over the whole sound (RMS). Two sounds with the same peak can feel very different here.' },
+  { key: 'peakDb', label: 'Peak', fmt: (v) => fmtLevel(v), hint: 'The loudest point, in dBFS. Set it with Loudness on Output.' },
+  { key: 'rmsDb', label: 'Average', fmt: (v) => fmtLevel(v), hint: 'Average loudness over the whole sound (RMS). Two sounds with the same peak can feel very different here.' },
   { key: 'centroid', label: 'Brightness', fmt: fmtHzUnit, hint: 'The center of the sound’s frequencies (spectral centroid). Higher reads as brighter and lighter.' },
   { key: 'lowShare', label: 'Bass', fmt: (v) => `${Math.round(v * 100)}%`, hint: 'How much of the energy is below 250 Hz. Lower reads as lighter; small speakers lose most of it anyway.' },
 ];
@@ -353,7 +357,7 @@ export function MetricsBar() {
   const a = results.get(P.id);
   const b = cmp ? results.get(cmp.id) : null;
   return (
-    <div className="flex min-h-9 shrink-0 flex-wrap items-center gap-x-5 gap-y-1 border-t border-line bg-panel px-3 py-1.5" aria-live="polite">
+    <div className="flex min-h-9 shrink-0 flex-wrap items-center gap-x-5 gap-y-1 border-t border-line bg-panel px-3 py-1.5">
       {a &&
         METRICS.map((m) => (
           <div key={m.key} className="flex items-baseline gap-1.5 text-[12px]" {...hintProps(m.label, m.hint)}>

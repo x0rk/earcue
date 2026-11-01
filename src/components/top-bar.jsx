@@ -1,9 +1,10 @@
 import { Download, Keyboard, Monitor, Moon, Play, Redo2, Repeat, Sun, Undo2 } from 'lucide-react';
 import { APP_NAME } from '../brand.js';
+import { MAX_NAME } from '../engine/model.js';
 import { playCompare, playCurrent, setLoop } from '../playback.js';
 import { pickReferenceFile } from '../io.js';
-import { currentSound, editSound, commit, openDialog, redo, setCompare, setPref, undo, useStore } from '../store.js';
-import { Button, IconButton, Select, Tip } from './ui.jsx';
+import { currentSound, editSound, openDialog, redo, removeRef, setCompare, setPref, undo, useStore } from '../store.js';
+import { Button, IconButton, NameInput, Select, Tip } from './ui.jsx';
 import { LogoMark } from './icons.jsx';
 
 const THEMES = ['system', 'light', 'dark'];
@@ -21,11 +22,18 @@ function CompareControl() {
       : compare?.kind === 'ref' && refs.some((r) => r.id === compare.id)
         ? `ref:${compare.id}`
         : 'none';
+  const currentRef = compare?.kind === 'ref' ? refs.find((r) => r.id === compare.id) : null;
+  // The file actions come first, so they stay in view however many sounds the list holds.
   const groups = [
-    { items: [{ value: 'none', label: 'Nothing' }] },
-    { label: 'Your sounds', items: others.map((s) => ({ value: `sound:${s.id}`, label: s.name })) },
+    {
+      items: [
+        { value: 'none', label: 'Nothing' },
+        { value: 'add-file', label: 'Compare with an audio file...' },
+        ...(currentRef ? [{ value: 'remove-ref', label: `Remove ${currentRef.name} from this list` }] : []),
+      ],
+    },
     ...(refs.length ? [{ label: 'Audio files', items: refs.map((r) => ({ value: `ref:${r.id}`, label: r.name })) }] : []),
-    { items: [{ value: 'add-file', label: 'Compare with an audio file...' }] },
+    { label: 'Your sounds', items: others.map((s) => ({ value: `sound:${s.id}`, label: s.name })) },
   ];
   return (
     <div className="flex items-center gap-1 rounded-xl bg-field/60 p-1">
@@ -38,6 +46,7 @@ function CompareControl() {
         groups={groups}
         onChange={(v) => {
           if (v === 'add-file') pickReferenceFile();
+          else if (v === 'remove-ref') removeRef(currentRef.id);
           else if (v === 'none') setCompare(null);
           else {
             const [kind, id] = v.split(':');
@@ -66,14 +75,7 @@ export function TopBar() {
         <LogoMark className="size-6 shrink-0 text-ink" />
         <span className="text-[14px] font-semibold tracking-tight">{APP_NAME}</span>
         <span className="text-faint">/</span>
-        <input
-          aria-label="Sound name"
-          value={name}
-          onChange={(e) => editSound((d) => void (d.name = e.target.value.slice(0, 60) || 'Untitled'), false)}
-          onBlur={() => commit()}
-          onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-          className="w-[180px] min-w-0 rounded-md border border-transparent bg-transparent px-1.5 py-1 text-[13px] font-medium hover:border-line focus:border-accent focus:outline-none"
-        />
+        <NameInput label="Sound name" value={name} max={MAX_NAME} fallback="Untitled" className="w-[180px] text-[13px] font-medium" onChange={(v) => editSound((d) => void (d.name = v), false)} />
       </div>
 
       <div className="mx-auto flex flex-wrap items-center gap-2">

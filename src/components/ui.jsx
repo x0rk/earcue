@@ -1,10 +1,22 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Collapsible, Dialog as RDialog, DropdownMenu, Select as RSelect, Slider, Switch as RSwitch, ToggleGroup, Tooltip as RTooltip } from 'radix-ui';
-import { Check, ChevronDown, X } from 'lucide-react';
-import { setHint, toggleOpenMore, useStore } from '../store.js';
+import { Check, ChevronDown, ChevronUp, X } from 'lucide-react';
+import { oneLine } from '../engine/model.js';
+import { commit, setHint, toggleOpenMore, useStore } from '../store.js';
 import { fmtNum } from '../lib/format.js';
+import { keyLabel } from '../lib/keys.js';
 
 const cx = (...c) => c.filter(Boolean).join(' ');
+
+// The help strip shows hints to pointer and sighted keyboard users; screen readers get the same
+// text as the control's description instead of a live region that talks on every focus change.
+function HintText({ id, text }) {
+  return text ? (
+    <span id={id} className="sr-only">
+      {text}
+    </span>
+  ) : null;
+}
 
 export const hintProps = (label, text) =>
   text
@@ -42,7 +54,7 @@ export function Button({ variant = 'secondary', size = 'md', className, ...props
 }
 
 export function Kbd({ children }) {
-  return <kbd className="rounded border border-line-strong bg-panel-2 px-1 font-mono text-[10.5px] text-muted">{children}</kbd>;
+  return <kbd className="rounded border border-line-strong bg-panel-2 px-1 font-mono text-[10.5px] text-muted">{typeof children === 'string' ? keyLabel(children) : children}</kbd>;
 }
 
 export function Tip({ label, shortcut, side = 'bottom', children }) {
@@ -52,7 +64,7 @@ export function Tip({ label, shortcut, side = 'bottom', children }) {
       <RTooltip.Portal>
         <RTooltip.Content side={side} sideOffset={6} className="z-50 flex items-center gap-2 rounded-md bg-ink px-2 py-1 text-[12px] text-panel shadow-pop animate-pop-in">
           {label}
-          {shortcut && <span className="font-mono text-[11px] opacity-60">{shortcut}</span>}
+          {shortcut && <span className="font-mono text-[11px] opacity-75">{keyLabel(shortcut)}</span>}
         </RTooltip.Content>
       </RTooltip.Portal>
     </RTooltip.Root>
@@ -83,10 +95,18 @@ export function Scrub({ label, value, onChange, onCommit, min, max, step = 1, lo
   const pos = Math.max(0, Math.min(POSITIONS, toPos(value)));
   const zero = bipolar ? Math.max(0, Math.min(POSITIONS, toPos(0))) : 0;
   const shown = format ? format(value) : fmtNum(value, digits);
+  // A word like "Off" stands on its own, without "dB" or "cents" after it.
+  const shownUnit = unit && /\d/.test(shown) ? unit : '';
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
+  const thumb = useRef(null);
+  const hintId = useId();
 
-  const finishEdit = (keep) => {
+  const startEdit = () => {
+    setDraft(fmtNum(value, Math.max(digits, step < 1 ? 2 : 0)));
+    setEditing(true);
+  };
+  const finishEdit = (keep, refocus) => {
     if (keep) {
       const v = parseFloat(draft);
       if (Number.isFinite(v)) {
@@ -95,10 +115,17 @@ export function Scrub({ label, value, onChange, onCommit, min, max, step = 1, lo
       }
     }
     setEditing(false);
+    if (refocus) requestAnimationFrame(() => thumb.current?.focus());
   };
 
   return (
-    <div className={cx('group relative h-8 rounded-[7px] bg-field transition-colors hover:bg-field-hover', disabled && 'pointer-events-none opacity-45')} {...hintProps(label, hint)}>
+    <div
+      className={cx(
+        'group relative h-8 rounded-[7px] bg-field transition-colors hover:bg-field-hover has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-1 has-[:focus-visible]:outline-accent',
+        disabled && 'pointer-events-none opacity-45',
+      )}
+      {...hintProps(label, hint)}
+    >
       <Slider.Root
         className="absolute inset-0 flex cursor-ew-resize touch-none select-none items-center"
         min={0}
@@ -107,26 +134,38 @@ export function Scrub({ label, value, onChange, onCommit, min, max, step = 1, lo
         value={[pos]}
         disabled={disabled}
         onValueChange={([p]) => onChange(clamp(quant(fromPos(p))))}
-        onValueCommit={() => onCommit?.()}
+        // Radix commits keyboard steps before it reports the new value, so wait for the change.
+        onValueCommit={() => queueMicrotask(() => onCommit?.())}
       >
         <Slider.Track className="relative h-full w-full overflow-hidden rounded-[7px]">
-          {/* The fill's leading edge is the indicator, so nothing sits on top of the label. */}
           <div
-            className={cx(
-              'absolute inset-y-0 bg-accent/15 transition-colors group-hover:bg-accent/22',
-              pos >= zero ? 'border-r-2' : 'border-l-2',
-              Math.abs(pos - zero) < 0.5 ? 'border-transparent' : 'border-accent',
-            )}
+            className="absolute inset-y-0 bg-accent/15 transition-colors group-hover:bg-accent/22"
             style={{ left: `${(Math.min(zero, pos) / POSITIONS) * 100}%`, width: `${(Math.abs(pos - zero) / POSITIONS) * 100}%` }}
           />
-          {bipolar && <div className="absolute inset-y-2 w-px bg-line-strong" style={{ left: `${(zero / POSITIONS) * 100}%` }} />}
+          {/* Edge marks only at the top and bottom, so no line runs through the label or the value. */}
+          {bipolar && <div className="absolute inset-y-0 w-px bg-[linear-gradient(to_bottom,var(--line-strong)_0_22%,transparent_22%_78%,var(--line-strong)_78%)]" style={{ left: `${(zero / POSITIONS) * 100}%` }} />}
+          {Math.abs(pos - zero) >= 0.5 && (
+            <div
+              className="absolute inset-y-0 w-0.5 -translate-x-1/2 bg-[linear-gradient(to_bottom,var(--accent)_0_22%,transparent_22%_78%,var(--accent)_78%)]"
+              style={{ left: `${(pos / POSITIONS) * 100}%` }}
+            />
+          )}
         </Slider.Track>
         <Slider.Thumb
+          ref={thumb}
           aria-label={label}
-          aria-valuetext={`${shown}${unit ? ` ${unit}` : ''}`}
-          className="block h-5 w-[3px] rounded-full bg-accent opacity-0 outline-none focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-accent/40"
+          aria-valuetext={`${shown}${shownUnit ? ` ${shownUnit}` : ''}`}
+          aria-describedby={hint ? hintId : undefined}
+          aria-keyshortcuts="Enter"
+          className="block h-8 w-px opacity-0 outline-none"
+          onKeyDown={(e) => {
+            if (e.key !== 'Enter') return;
+            e.preventDefault();
+            startEdit();
+          }}
         />
       </Slider.Root>
+      <HintText id={hintId} text={hint} />
       <span className="pointer-events-none absolute inset-y-0 left-2.5 flex items-center text-[12.5px] text-muted transition-colors group-hover:text-ink">{label}</span>
       {editing ? (
         <input
@@ -138,25 +177,22 @@ export function Scrub({ label, value, onChange, onCommit, min, max, step = 1, lo
           onChange={(e) => setDraft(e.target.value)}
           onFocus={(e) => e.target.select()}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') finishEdit(true);
-            if (e.key === 'Escape') finishEdit(false);
+            if (e.key === 'Enter') finishEdit(true, true);
+            if (e.key === 'Escape') finishEdit(false, true);
           }}
-          onBlur={() => finishEdit(true)}
+          onBlur={() => finishEdit(true, false)}
         />
       ) : (
         <button
           type="button"
           tabIndex={-1}
-          title="Click to type a value"
+          title="Click to type a value, or press Enter on the slider"
           className="absolute inset-y-1 right-1 flex items-center gap-1 rounded-[5px] px-1.5 font-mono text-[12px] text-ink tabular hover:bg-panel/80"
-          onClick={() => {
-            setDraft(fmtNum(value, Math.max(digits, step < 1 ? 2 : 0)));
-            setEditing(true);
-          }}
+          onClick={startEdit}
         >
-          {sub && <span className="mr-1 text-faint">{sub(value)}</span>}
+          {sub && <span className="mr-1 text-muted">{sub(value)}</span>}
           <span>{shown}</span>
-          {unit && <span className="text-muted">{unit}</span>}
+          {shownUnit && <span className="text-muted">{shownUnit}</span>}
         </button>
       )}
     </div>
@@ -165,13 +201,16 @@ export function Scrub({ label, value, onChange, onCommit, min, max, step = 1, lo
 
 // ---------- segmented ----------
 export function Segmented({ label, value, options, onChange, hint, size = 'md', stack = false }) {
+  const hintId = useId();
   // Stacked puts the label above, giving four longer options the full panel width.
   return (
     <div className={cx('flex gap-2', stack ? 'flex-col gap-1.5' : 'items-center')} {...hintProps(label, hint)}>
       {label && <span className={cx('shrink-0 text-[12.5px] text-muted', !stack && 'w-[68px]')}>{label}</span>}
+      <HintText id={hintId} text={hint} />
       <ToggleGroup.Root
         type="single"
         aria-label={label}
+        aria-describedby={hint ? hintId : undefined}
         value={String(value)}
         onValueChange={(v) => {
           if (!v) return;
@@ -186,7 +225,7 @@ export function Segmented({ label, value, options, onChange, hint, size = 'md', 
             value={String(o.value)}
             title={o.title}
             className={cx(
-              'flex min-w-0 flex-1 items-center justify-center gap-1 rounded-[5px] px-1.5 text-[12px] text-muted transition-colors hover:text-ink data-[state=on]:bg-panel data-[state=on]:text-ink data-[state=on]:shadow-[0_0_0_1px_var(--line-strong)]',
+              'flex min-w-0 flex-1 items-center justify-center gap-1 rounded-[5px] px-1.5 text-[12px] text-muted transition-colors hover:text-ink data-[state=on]:bg-panel data-[state=on]:font-medium data-[state=on]:text-ink data-[state=on]:shadow-[0_0_0_1px_var(--faint)]',
               size === 'sm' && 'h-6',
               size === 'md' && 'h-7',
               size === 'tall' && 'h-11 flex-col gap-0.5 px-0.5 text-[11.5px]',
@@ -203,17 +242,23 @@ export function Segmented({ label, value, options, onChange, hint, size = 'md', 
 
 // ---------- switch ----------
 export function SwitchRow({ label, checked, onChange, hint }) {
+  const hintId = useId();
+  // The hint sits outside the label, or it would become part of the switch's name.
   return (
-    <label className="flex h-8 cursor-pointer items-center justify-between rounded-[7px] px-2.5 text-[12.5px] text-muted hover:bg-field hover:text-ink" {...hintProps(label, hint)}>
-      {label}
-      <RSwitch.Root
-        checked={checked}
-        onCheckedChange={onChange}
-        className="relative h-[18px] w-8 rounded-full bg-line-strong transition-colors data-[state=checked]:bg-accent"
-      >
-        <RSwitch.Thumb className="block size-3.5 translate-x-0.5 rounded-full bg-panel shadow transition-transform data-[state=checked]:translate-x-[16px]" />
-      </RSwitch.Root>
-    </label>
+    <>
+      <HintText id={hintId} text={hint} />
+      <label className="flex h-8 cursor-pointer items-center justify-between rounded-[7px] px-2.5 text-[12.5px] text-muted hover:bg-field hover:text-ink" {...hintProps(label, hint)}>
+        {label}
+        <RSwitch.Root
+          checked={checked}
+          onCheckedChange={onChange}
+          aria-describedby={hint ? hintId : undefined}
+          className="relative h-[18px] w-8 shrink-0 rounded-full bg-faint transition-colors data-[state=checked]:bg-accent"
+        >
+          <RSwitch.Thumb className="block size-3.5 translate-x-0.5 rounded-full bg-panel shadow transition-transform data-[state=checked]:translate-x-[16px]" />
+        </RSwitch.Root>
+      </label>
+    </>
   );
 }
 
@@ -261,10 +306,13 @@ export function Select({ value, onChange, groups, placeholder, label, className,
       </RSelect.Trigger>
       <RSelect.Portal>
         <RSelect.Content position="popper" sideOffset={6} className="z-50 max-h-[min(420px,var(--radix-select-content-available-height))] min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-xl border border-line-strong bg-panel p-1 shadow-pop animate-pop-in">
+          <RSelect.ScrollUpButton className="flex h-6 items-center justify-center text-muted">
+            <ChevronUp className="size-3.5" />
+          </RSelect.ScrollUpButton>
           <RSelect.Viewport>
             {groups.map((g, gi) => (
               <RSelect.Group key={g.label || gi}>
-                {g.label && <RSelect.Label className="px-2 pb-1 pt-2 text-[11px] font-medium text-faint">{g.label}</RSelect.Label>}
+                {g.label && <RSelect.Label className="px-2 pb-1 pt-2 text-[11px] font-medium text-muted">{g.label}</RSelect.Label>}
                 {g.items.map((it) => (
                   <RSelect.Item
                     key={it.value}
@@ -280,6 +328,9 @@ export function Select({ value, onChange, groups, placeholder, label, className,
               </RSelect.Group>
             ))}
           </RSelect.Viewport>
+          <RSelect.ScrollDownButton className="flex h-6 items-center justify-center text-muted">
+            <ChevronDown className="size-3.5" />
+          </RSelect.ScrollDownButton>
         </RSelect.Content>
       </RSelect.Portal>
     </RSelect.Root>
@@ -288,11 +339,22 @@ export function Select({ value, onChange, groups, placeholder, label, className,
 
 // ---------- menu ----------
 export function Menu({ trigger, items, align = 'end' }) {
+  // An item that moves focus somewhere itself, like Rename, sets keepFocus so the menu doesn't pull it back.
+  const keepFocus = useRef(false);
   return (
     <DropdownMenu.Root>
       <DropdownMenu.Trigger asChild>{trigger}</DropdownMenu.Trigger>
       <DropdownMenu.Portal>
-        <DropdownMenu.Content align={align} sideOffset={6} className="z-50 min-w-[200px] rounded-xl border border-line-strong bg-panel p-1 shadow-pop animate-pop-in">
+        <DropdownMenu.Content
+          align={align}
+          sideOffset={6}
+          className="z-50 min-w-[200px] rounded-xl border border-line-strong bg-panel p-1 shadow-pop animate-pop-in"
+          onCloseAutoFocus={(e) => {
+            if (!keepFocus.current) return;
+            keepFocus.current = false;
+            e.preventDefault();
+          }}
+        >
           {items.map((it, i) =>
             it === 'sep' ? (
               <DropdownMenu.Separator key={`sep-${i}`} className="my-1 h-px bg-line" />
@@ -300,7 +362,10 @@ export function Menu({ trigger, items, align = 'end' }) {
               <DropdownMenu.Item
                 key={it.label}
                 disabled={it.disabled}
-                onSelect={it.onSelect}
+                onSelect={() => {
+                  keepFocus.current = !!it.keepFocus;
+                  it.onSelect?.();
+                }}
                 className={cx(
                   'flex cursor-pointer select-none items-center gap-2.5 rounded-md px-2 py-1.5 text-[13px] outline-none data-[disabled]:opacity-40 data-[highlighted]:bg-field [&_svg]:size-4',
                   it.danger ? 'text-hot' : 'text-ink',
@@ -311,7 +376,7 @@ export function Menu({ trigger, items, align = 'end' }) {
                   <span>{it.label}</span>
                   {it.description && <span className="text-[11.5px] text-muted">{it.description}</span>}
                 </span>
-                {it.shortcut && <span className="ml-auto pl-4 font-mono text-[11px] text-faint">{it.shortcut}</span>}
+                {it.shortcut && <span className="ml-auto pl-4 font-mono text-[11px] text-muted">{keyLabel(it.shortcut)}</span>}
               </DropdownMenu.Item>
             ),
           )}
@@ -323,6 +388,10 @@ export function Menu({ trigger, items, align = 'end' }) {
 
 // ---------- dialog ----------
 export function Dialog({ open, onOpenChange, title, description, children, width = 480, footer }) {
+  // These dialogs open from app state rather than a Radix trigger, so Radix can't know where focus
+  // came from. Remember it while rendering, before the dialog takes focus, and hand it back on close.
+  const opener = useRef(null);
+  if (open && !opener.current && typeof document !== 'undefined') opener.current = document.activeElement;
   return (
     <RDialog.Root open={open} onOpenChange={onOpenChange}>
       <RDialog.Portal>
@@ -330,6 +399,14 @@ export function Dialog({ open, onOpenChange, title, description, children, width
         <RDialog.Content
           className="fixed left-1/2 top-1/2 z-50 flex max-h-[calc(100dvh-32px)] w-[calc(100vw-32px)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border border-line-strong bg-panel shadow-pop animate-pop-in"
           style={{ maxWidth: width }}
+          onCloseAutoFocus={(e) => {
+            const el = opener.current;
+            opener.current = null;
+            if (el && el !== document.body && el.isConnected) {
+              e.preventDefault();
+              el.focus();
+            }
+          }}
         >
           <div className="flex items-start justify-between gap-4 px-5 pb-2 pt-5">
             <div>
@@ -382,6 +459,7 @@ export function EditableText({ value, onCommit, className, label, startEditing =
       ref={ref}
       autoFocus
       aria-label={label}
+      spellCheck={false}
       className={cx('rounded-md bg-panel px-1.5 outline-none ring-1 ring-accent', className)}
       value={draft}
       onChange={(e) => setDraft(e.target.value)}
@@ -390,6 +468,32 @@ export function EditableText({ value, onCommit, className, label, startEditing =
         if (e.key === 'Escape') finish(false);
       }}
       onBlur={() => finish(true)}
+    />
+  );
+}
+
+// A name field that edits live. What you type is kept locally, so you can clear the field and type
+// a new name; an empty field falls back when you leave it, and the whole edit is one undo step.
+export function NameInput({ label, value, onChange, fallback, max, className }) {
+  const [draft, setDraft] = useState(null);
+  const finish = () => {
+    if (draft !== null) onChange(draft.trim() || fallback);
+    setDraft(null);
+    commit();
+  };
+  return (
+    <input
+      aria-label={label}
+      spellCheck={false}
+      value={draft ?? value}
+      onChange={(e) => {
+        const v = oneLine(e.target.value).slice(0, max);
+        setDraft(v);
+        if (v.trim()) onChange(v);
+      }}
+      onBlur={finish}
+      onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+      className={cx('min-w-0 rounded-md border border-transparent bg-transparent px-1.5 py-1 hover:border-line focus:border-accent focus:outline-none', className)}
     />
   );
 }

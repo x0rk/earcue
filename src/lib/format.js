@@ -9,8 +9,9 @@ export function hzToNote(f) {
 }
 
 export const fmtHz = (f) => (f >= 1000 ? `${(f / 1000).toFixed(f >= 10000 ? 1 : 2).replace(/\.?0+$/, '')}k` : `${Math.round(f)}`);
-export const fmtHzUnit = (f) => (f >= 1000 ? `${fmtHz(f)}Hz` : `${Math.round(f)} Hz`);
-export const fmtDb = (v) => (Number.isFinite(v) ? v.toFixed(1) : '-inf');
+export const fmtHzUnit = (f) => (f >= 1000 ? `${fmtHz(f)} Hz` : `${Math.round(f)} Hz`);
+// Below -100 dB nothing is audible, so the value reads as a word instead of "-inf".
+export const fmtLevel = (v, unit = 'dB') => (Number.isFinite(v) && v > -100 ? `${v.toFixed(1)} ${unit}` : 'Silent');
 export const fmtNum = (v, digits = 0) => String(Number(v.toFixed(digits)));
 export const fmtSigned = (v, digits = 1) => `${v > 0 ? '+' : ''}${v.toFixed(digits)}`;
 export const fmtPan = (v) => (Math.abs(v) < 0.005 ? 'Center' : `${Math.round(Math.abs(v) * 100)}% ${v < 0 ? 'L' : 'R'}`);

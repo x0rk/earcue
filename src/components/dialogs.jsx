@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Collapsible } from 'radix-ui';
+import { Collapsible, RadioGroup } from 'radix-ui';
 import { ChevronDown, Code2, FileAudio, FolderArchive, Mic, Package, Play, Plus, Square } from 'lucide-react';
+import { REPO_URL } from '../brand.js';
 import { presets } from '../engine/model.js';
 import { decodeToSample, storeSample } from '../engine/samples.js';
 import { slug } from '../engine/export.js';
 import { exportSound } from '../io.js';
 import { audioCtx, previewPatch, results } from '../playback.js';
-import { addSampleLayer, addSound, closeDialog, currentSound, newBlankSound, showToast, useStore } from '../store.js';
-import { Button, Dialog, Kbd, Segmented } from './ui.jsx';
+import { addSampleLayer, addSound, closeDialog, currentSound, newBlankSound, setPref, showToast, useStore } from '../store.js';
+import { Button, Dialog, Kbd, Segmented, SwitchRow } from './ui.jsx';
 
 function useDialog(name) {
   const open = useStore((s) => s.dialog === name);
@@ -23,7 +24,7 @@ export function NewSoundDialog() {
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
         <button
           type="button"
-          className="flex min-h-[92px] flex-col items-start justify-between rounded-xl border border-dashed border-line-strong p-3 text-left hover:border-accent hover:bg-accent-soft/40"
+          className="flex min-h-[92px] flex-col items-start gap-2 rounded-xl border border-dashed border-line-strong p-3 text-left hover:border-accent hover:bg-accent-soft/40"
           onClick={() => {
             newBlankSound();
             closeDialog();
@@ -36,7 +37,8 @@ export function NewSoundDialog() {
           </span>
         </button>
         {templates.map((t) => (
-          <div key={t.name} className="group relative flex min-h-[92px] flex-col justify-between rounded-xl border border-line p-3 hover:border-accent hover:bg-accent-soft/40">
+          // Every card starts its title at the same height, however long its description runs.
+          <div key={t.name} className="group relative flex min-h-[92px] flex-col gap-2 rounded-xl border border-line p-3 hover:border-accent hover:bg-accent-soft/40">
             <button
               type="button"
               className="absolute inset-0 rounded-xl"
@@ -46,7 +48,7 @@ export function NewSoundDialog() {
                 closeDialog();
               }}
             />
-            <span className="pointer-events-none text-[11.5px] text-faint">{t.layers.length} layer{t.layers.length > 1 ? 's' : ''}</span>
+            <span className="pointer-events-none flex h-4 items-center text-[11.5px] text-muted">{t.layers.length} layer{t.layers.length > 1 ? 's' : ''}</span>
             <span className="pointer-events-none pr-8">
               <span className="block text-[13px] font-semibold">{t.name}</span>
               <span className="block text-[12px] text-muted">{t.description}</span>
@@ -72,7 +74,8 @@ const WHAT = [
 export function ExportDialog() {
   const [open, onOpenChange] = useDialog('export');
   const P = useStore((s) => currentSound(s));
-  const count = useStore((s) => s.ws.sounds.length);
+  const sounds = useStore((s) => s.ws.sounds);
+  const count = sounds.length;
   const [scope, setScope] = useState('sound');
   const [what, setWhat] = useState('wav');
   const [name, setName] = useState('');
@@ -88,6 +91,8 @@ export function ExportDialog() {
 
   const res = results.get(P.id);
   const ext = scope === 'set' ? '.zip' : WHAT.find((w) => w.value === what).ext;
+  const empty = scope === 'sound' && !P.layers.length;
+  const keepsClips = (what === 'project' || what === 'all') && (scope === 'set' ? sounds : [P]).some((p) => p.layers.some((L) => L.type === 'sample'));
 
   const run = async () => {
     setBusy(true);
@@ -108,14 +113,22 @@ export function ExportDialog() {
       open={open}
       onOpenChange={onOpenChange}
       title="Export"
-      description={scope === 'set' ? `All ${count} sounds in your set, in one .zip.` : res ? `${P.name}, ${Math.round(res.duration * 1000)} ms, peak ${P.master.out} dBFS.` : P.name}
+      description={
+        scope === 'set'
+          ? `All ${count} sounds in your set, in one .zip.`
+          : empty
+            ? `${P.name} has no layers yet, so there is nothing to export.`
+            : res
+              ? `${P.name}, ${Math.round(res.duration * 1000)} ms, peak ${P.master.out} dBFS.`
+              : P.name
+      }
       width={560}
       footer={
         <>
           <Button variant="ghost" onClick={closeDialog}>
             Cancel
           </Button>
-          <Button variant="dark" disabled={busy || !name.trim()} onClick={run}>
+          <Button variant="dark" disabled={busy || !name.trim() || empty} onClick={run}>
             {busy ? 'Preparing...' : `Download ${ext}`}
           </Button>
         </>
@@ -131,17 +144,16 @@ export function ExportDialog() {
             { value: 'set', label: `Whole set (${count})` },
           ]}
         />
-        <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="What to export">
+        <RadioGroup.Root className="grid grid-cols-2 gap-2" aria-label="What to export" value={what} onValueChange={setWhat}>
           {WHAT.map((w) => {
             const Icon = w.icon;
             const active = what === w.value;
             return (
-              <button
+              <RadioGroup.Item
                 key={w.value}
-                type="button"
-                role="radio"
-                aria-checked={active}
-                onClick={() => setWhat(w.value)}
+                value={w.value}
+                // In a radio group the focused option is the chosen one, however focus got there.
+                onFocus={() => setWhat(w.value)}
                 className={`flex items-start gap-2.5 rounded-xl border p-3 text-left transition-colors ${active ? 'border-accent bg-accent-soft/50' : 'border-line hover:border-line-strong hover:bg-panel-2'}`}
               >
                 <Icon className={`mt-0.5 size-4 shrink-0 ${active ? 'text-accent' : 'text-muted'}`} />
@@ -151,15 +163,16 @@ export function ExportDialog() {
                   </span>
                   <span className="block text-[12px] text-muted">{w.body}</span>
                 </span>
-              </button>
+              </RadioGroup.Item>
             );
           })}
-        </div>
+        </RadioGroup.Root>
+        {keepsClips && <p className="text-[12px] text-muted">Project files keep each recording whole, trimmed parts included, so you can change the trims later. Code exports include only the part that plays.</p>}
         <label className="flex items-center gap-2 text-[12.5px] text-muted">
           <span className="w-[68px] shrink-0">File name</span>
           <span className="flex flex-1 items-center rounded-[7px] bg-field pr-2 focus-within:ring-1 focus-within:ring-accent">
-            <input value={name} onChange={(e) => setName(e.target.value)} className="min-w-0 flex-1 bg-transparent px-2.5 py-1.5 text-[13px] text-ink outline-none" />
-            <span className="font-mono text-[12px] text-faint">{ext}</span>
+            <input value={name} spellCheck={false} onChange={(e) => setName(e.target.value)} className="min-w-0 flex-1 bg-transparent px-2.5 py-1.5 text-[13px] text-ink outline-none" />
+            <span className="font-mono text-[12px] text-muted">{ext}</span>
           </span>
         </label>
         {what !== 'project' && what !== 'code' && (
@@ -208,12 +221,14 @@ export function ExportDialog() {
 
 // ---------- record ----------
 const MAX_RECORD_MS = 10000;
+const RECORD_INTRO = `Tap a desk, a cup or a key near your microphone. Recording stops after ${MAX_RECORD_MS / 1000} seconds.`;
 
 export function RecordDialog() {
   const [open, onOpenChange] = useDialog('record');
   const [state, setState] = useState('idle');
-  const [message, setMessage] = useState('Tap a desk, a cup or a key near your microphone. Recording stops after 10 seconds.');
+  const [message, setMessage] = useState(RECORD_INTRO);
   const [level, setLevel] = useState(0);
+  const [seconds, setSeconds] = useState(0);
   const rec = useRef({});
 
   const stop = () => {
@@ -227,10 +242,11 @@ export function RecordDialog() {
 
   useEffect(() => {
     if (!open) {
-      // Closing mid-recording discards the take instead of adding it.
+      // Closing mid-recording, or while the browser is still asking for the microphone, discards the take.
       rec.current.cancelled = true;
       stop();
       setState('idle');
+      setMessage(RECORD_INTRO);
     }
   }, [open]);
 
@@ -239,11 +255,21 @@ export function RecordDialog() {
       setMessage('This browser cannot record audio. Add an audio file instead.');
       return;
     }
+    // Each attempt gets its own record, so closing the dialog during the permission prompt cancels this one.
+    const attempt = { cancelled: false };
+    rec.current = attempt;
+    setState('starting');
     let stream;
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
     } catch {
+      if (attempt.cancelled) return;
       setMessage('Microphone access was blocked. Allow it in your browser settings and try again.');
+      setState('idle');
+      return;
+    }
+    if (attempt.cancelled) {
+      stream.getTracks().forEach((t) => t.stop());
       return;
     }
     const c = audioCtx();
@@ -255,7 +281,7 @@ export function RecordDialog() {
     const recorder = new MediaRecorder(stream);
     recorder.ondataavailable = (e) => e.data.size && chunks.push(e.data);
     recorder.onstop = async () => {
-      if (rec.current.cancelled) return;
+      if (attempt.cancelled) return;
       setState('saving');
       try {
         const blob = new Blob(chunks, { type: recorder.mimeType });
@@ -270,19 +296,20 @@ export function RecordDialog() {
         setState('idle');
       }
     };
-    rec.current = { stream, recorder, t0: performance.now(), cancelled: false };
+    Object.assign(attempt, { stream, recorder, t0: performance.now() });
     recorder.start();
     setState('recording');
+    setMessage('Recording. Press the button again to stop.');
     const tick = () => {
       analyser.getFloatTimeDomainData(buf);
       let pk = 0;
       for (let i = 0; i < buf.length; i++) pk = Math.max(pk, Math.abs(buf[i]));
       setLevel(Math.max(0, Math.min(1, (20 * Math.log10(pk || 1e-9) + 60) / 60)));
-      setMessage(`Recording ${((performance.now() - rec.current.t0) / 1000).toFixed(1)} s`);
-      rec.current.raf = requestAnimationFrame(tick);
+      setSeconds((performance.now() - attempt.t0) / 1000);
+      attempt.raf = requestAnimationFrame(tick);
     };
     tick();
-    rec.current.timer = setTimeout(stop, MAX_RECORD_MS);
+    attempt.timer = setTimeout(stop, MAX_RECORD_MS);
   };
 
   return (
@@ -291,7 +318,7 @@ export function RecordDialog() {
         <button
           type="button"
           onClick={state === 'recording' ? stop : start}
-          disabled={state === 'saving'}
+          disabled={state === 'saving' || state === 'starting'}
           className={`grid size-20 place-items-center rounded-full text-panel shadow-pop transition-transform active:scale-95 ${state === 'recording' ? 'bg-hot motion-safe:animate-[pulse-soft_1s_ease-in-out_infinite]' : 'bg-hot hover:brightness-110'}`}
           aria-label={state === 'recording' ? 'Stop recording' : 'Start recording'}
         >
@@ -300,8 +327,14 @@ export function RecordDialog() {
         <div className="h-2 w-full overflow-hidden rounded-full bg-field" aria-hidden="true">
           <div className="h-full rounded-full bg-hot transition-[width] duration-75" style={{ width: `${level * 100}%` }} />
         </div>
+        {/* The running time stays out of the status region, which only announces changes of state. */}
+        {state === 'recording' && (
+          <p className="font-mono text-[12px] text-muted tabular" aria-hidden="true">
+            {seconds.toFixed(1)} s
+          </p>
+        )}
         <p className="text-center text-[12.5px] text-muted" role="status">
-          {state === 'saving' ? 'Adding your recording...' : message}
+          {state === 'saving' ? 'Adding your recording...' : state === 'starting' ? 'Waiting for the microphone...' : message}
         </p>
       </div>
     </Dialog>
@@ -321,12 +354,13 @@ const SHORTCUTS = [
   ['= / - / 0', 'Zoom in / out / fit'],
   ['⌘ + scroll', 'Zoom the timeline where you point'],
   ['Esc', 'Select Output'],
-  ['Drag a slider', 'Change a value. Click the number to type it.'],
+  ['Drag a slider', 'Change a value. Click the number, or press Enter on the slider, to type it.'],
   ['Drop a file', 'Add audio as a layer, or open a project'],
 ];
 
 export function ShortcutsDialog() {
   const [open, onOpenChange] = useDialog('shortcuts');
+  const singleKeys = useStore((s) => s.singleKeys);
   return (
     <Dialog open={open} onOpenChange={onOpenChange} title="Keyboard shortcuts" width={480}>
       <dl className="grid grid-cols-[auto_1fr] gap-x-5 gap-y-2.5">
@@ -339,6 +373,24 @@ export function ShortcutsDialog() {
           </div>
         ))}
       </dl>
+      <div className="mt-4 border-t border-line pt-3">
+        <SwitchRow
+          label="Single-key shortcuts"
+          checked={singleKeys}
+          onChange={(v) => setPref({ singleKeys: v })}
+          hint="Shortcuts that are one key, like M to mute. They pause while a slider or menu has focus. Turn them off if you use voice control or press them by accident."
+        />
+      </div>
+      <p className="mt-3 px-2.5 text-[12px] text-muted">
+        Earcue is free and open source.{' '}
+        <a className="underline underline-offset-2 hover:text-ink" href={REPO_URL} target="_blank" rel="noreferrer">
+          Source code
+        </a>
+        {' · '}
+        <a className="underline underline-offset-2 hover:text-ink" href="/third-party-licenses.md" target="_blank" rel="noreferrer">
+          Open-source licenses
+        </a>
+      </p>
     </Dialog>
   );
 }
