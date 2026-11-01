@@ -164,10 +164,11 @@ export function Scrub({ label, value, onChange, onCommit, min, max, step = 1, lo
 }
 
 // ---------- segmented ----------
-export function Segmented({ label, value, options, onChange, hint, size = 'md' }) {
+export function Segmented({ label, value, options, onChange, hint, size = 'md', stack = false }) {
+  // Stacked puts the label above, giving four longer options the full panel width.
   return (
-    <div className="flex items-center gap-2" {...hintProps(label, hint)}>
-      {label && <span className="w-[68px] shrink-0 text-[12.5px] text-muted">{label}</span>}
+    <div className={cx('flex gap-2', stack ? 'flex-col gap-1.5' : 'items-center')} {...hintProps(label, hint)}>
+      {label && <span className={cx('shrink-0 text-[12.5px] text-muted', !stack && 'w-[68px]')}>{label}</span>}
       <ToggleGroup.Root
         type="single"
         aria-label={label}

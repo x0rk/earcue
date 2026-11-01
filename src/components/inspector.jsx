@@ -294,6 +294,7 @@ function LayerInspector({ L }) {
       >
         <Segmented
           label="Mode"
+          stack
           value={L.filter.type}
           hint="Removes part of the sound. Darker cuts the highs, Thinner cuts the lows, Focus keeps only a narrow band."
           onChange={(v) => editLayer(L.id, (d) => void (d.filter.type = v))}
@@ -314,7 +315,8 @@ function LayerInspector({ L }) {
 
       <Section id="wobble" title="Wobble">
         <Segmented
-          label="Wobble"
+          label="What wobbles"
+          stack
           value={L.lfo.target}
           hint="Makes something move up and down over time: the pitch (vibrato), the filter (wah), or the volume (tremolo)."
           onChange={(v) => editLayer(L.id, (d) => void (d.lfo.target = v))}
