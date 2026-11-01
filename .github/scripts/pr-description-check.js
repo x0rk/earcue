@@ -15,19 +15,43 @@ const TEMPLATE_PLACEHOLDERS = [
   'For bugs provide before and after',
 ];
 
-// A section is the text under its heading, up to the next heading of any level. Matching whole
-// heading lines keeps "# Description" from matching inside "## Description" and the like.
+// Headings from the PR template always end a section. Other headings end it only at the same or a
+// higher level, so authors can use subheadings inside a section. Fenced code is skipped, so a "#"
+// comment in a code sample isn't read as a heading.
+const TEMPLATE_HEADINGS = [
+  'Description',
+  'Documentation',
+  'Changes',
+  'In Scope',
+  'Not in Scope',
+  'Breaking Changes',
+  'Deployment Notes',
+  'Media',
+  'Tests to Run for this PR',
+  'Checklist',
+  'Author Checklist',
+  'Reviewer Checklist',
+];
+
 function extractSection(body, header) {
+  const level = header.indexOf(' ');
   const lines = body.split(/\r?\n/);
-  const start = lines.findIndex((line) => line.trim() === header);
-  if (start === -1) return null;
+  let fenced = false;
+  let start = -1;
   let end = lines.length;
-  for (let i = start + 1; i < lines.length; i++) {
-    if (/^#{1,6}\s/.test(lines[i])) {
+  for (let i = 0; i < lines.length; i++) {
+    if (/^\s*(```|~~~)/.test(lines[i])) fenced = !fenced;
+    if (fenced) continue;
+    const heading = lines[i].match(/^(#{1,6})\s+(.*?)\s*$/);
+    if (!heading) continue;
+    if (start === -1) {
+      if (lines[i].trim() === header) start = i;
+    } else if (heading[1].length <= level || TEMPLATE_HEADINGS.includes(heading[2])) {
       end = i;
       break;
     }
   }
+  if (start === -1) return null;
   return lines.slice(start + 1, end).join('\n').trim();
 }
 
