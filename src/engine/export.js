@@ -138,11 +138,12 @@ function usedSampleData(patch) {
 // Code exports carry only the part of each clip that plays, so audio trimmed away in the editor never
 // ships in someone's app. Each layer's trims shift to match the shorter clip, so it sounds the same.
 function packSamples(patches) {
-  const spans = new Map();
-  for (const p of patches) {
-    for (const L of p.layers) {
+  const uses = new Map();
+  const byClip = new Map();
+  patches.forEach((p, pi) =>
+    p.layers.forEach((L, li) => {
       const s = L.type === 'sample' && samples.get(L.sampleId);
-      if (!s) continue;
+      if (!s) return;
       const n = s.channels[0].length;
       const a = (Math.max(0, L.trimStart) / 1000) * s.sampleRate;
       const b = (Math.max(0, L.trimEnd) / 1000) * s.sampleRate;
@@ -150,19 +151,35 @@ function packSamples(patches) {
       // on each side covers the rounding.
       const lo = Math.min(n - 1, Math.max(0, Math.floor(L.reverse ? b : a) - 1));
       const hi = Math.max(lo + 1, Math.min(n, Math.ceil(n - (L.reverse ? a : b)) + 1));
-      const span = spans.get(L.sampleId);
-      spans.set(L.sampleId, span ? { s, lo: Math.min(span.lo, lo), hi: Math.max(span.hi, hi) } : { s, lo, hi });
+      const use = { s, lo, hi };
+      uses.set(`${pi}:${li}`, use);
+      byClip.set(L.sampleId, [...(byClip.get(L.sampleId) || []), use]);
+    }),
+  );
+  // Layers that play overlapping parts of one clip share a span. Parts that don't overlap ship as
+  // separate clips, so the audio between them stays out.
+  const spans = new Map();
+  for (const [id, list] of byClip) {
+    let span = null;
+    for (const use of list.sort((x, y) => x.lo - y.lo)) {
+      if (span && use.lo <= span.hi) span.hi = Math.max(span.hi, use.hi);
+      else {
+        span = { key: spans.has(id) ? `${id}-${spans.size}` : id, s: use.s, lo: use.lo, hi: use.hi };
+        spans.set(span.key, span);
+      }
+      use.span = span;
     }
   }
-  const packed = patches.map((p) => ({
+  const packed = patches.map((p, pi) => ({
     ...p,
-    layers: p.layers.map((L) => {
-      const span = L.type === 'sample' && spans.get(L.sampleId);
+    layers: p.layers.map((L, li) => {
+      const span = uses.get(`${pi}:${li}`)?.span;
       if (!span) return L;
       const cutStart = (span.lo / span.s.sampleRate) * 1000;
       const cutEnd = ((span.s.channels[0].length - span.hi) / span.s.sampleRate) * 1000;
       return {
         ...L,
+        sampleId: span.key,
         trimStart: Math.max(0, L.trimStart - (L.reverse ? cutEnd : cutStart)),
         trimEnd: Math.max(0, L.trimEnd - (L.reverse ? cutStart : cutEnd)),
       };

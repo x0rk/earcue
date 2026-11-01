@@ -1,3 +1,4 @@
+import { APP_SLUG } from './brand.js';
 import { dbToGain } from './engine/engine.js';
 import { encodeWav, makeZip, moduleSource, patchJson, readme, readPatchFile, setModuleSource, setReadme, slug } from './engine/export.js';
 import { MAX_RENDER_MS, renderPatch } from './engine/render.js';
@@ -69,13 +70,25 @@ export function handleDroppedFiles(files) {
   if (!audio.length && !projects.length) showToast('Drop an audio file or an exported project (.json).');
 }
 
+// Every open tab holds this lock in shared mode. Another tab may be using audio that isn't in this
+// tab's copy of the workspace, so stored audio is only cleaned up when no other tab holds it.
+const TABS_LOCK = `${APP_SLUG}:open-tabs`;
+
+async function pruneIfOnlyTab(keep) {
+  if (!navigator.locks) return;
+  await navigator.locks.request(TABS_LOCK, { mode: 'exclusive', ifAvailable: true }, async (lock) => {
+    if (lock) await pruneSamples(keep);
+  });
+  navigator.locks.request(TABS_LOCK, { mode: 'shared' }, () => new Promise(() => {}));
+}
+
 // Loads audio for sample layers and references saved in earlier visits, and deletes the rest.
 export async function loadStoredSamples() {
   const s = useStore.getState();
   const ids = new Set();
   for (const p of s.ws.sounds) for (const L of p.layers) if (L.type === 'sample' && L.sampleId) ids.add(L.sampleId);
   for (const r of s.refs) ids.add(r.sampleId);
-  await pruneSamples(ids);
+  await pruneIfOnlyTab(ids);
   if (await loadSamples([...ids])) bumpSamples();
 }
 
