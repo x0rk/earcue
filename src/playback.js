@@ -1,5 +1,6 @@
 import { renderPatch, renderWithLayers } from './engine/render.js';
 import { layerDefaults, masterDefaults } from './engine/model.js';
+import { ROLE_IDS, SCENE, soundForRole } from './engine/roles.js';
 import { PREVIEW_SR, samples, sampleToBufferSafe } from './engine/playable.js';
 import { currentSound, showToast, useStore } from './store.js';
 
@@ -40,6 +41,7 @@ export function scheduleRender() {
 async function runRender() {
   const mine = ++token;
   const s = useStore.getState();
+  if (s.page !== 'set') return;
   const cur = currentSound(s);
   const cmp = comparePatch(s);
   try {
@@ -60,8 +62,10 @@ async function runRender() {
 }
 
 export function startRenderLoop() {
+  results.clear();
   scheduleRender();
   return useStore.subscribe((s, prev) => {
+    if (s.page !== 'set') return;
     if (
       currentSound(s) !== currentSound(prev) ||
       s.compare !== prev.compare ||
@@ -165,4 +169,62 @@ export function setLoop(on) {
 export async function previewPatch(patch) {
   const res = await renderPatch(patch, PREVIEW_SR);
   playResult(res, { variation: patch.master.variation });
+}
+
+// ---------- preview ----------
+// Renders kept per sound and redone only after the sound or its audio changes, so the preview plays
+// a click at once and the set checks only re-render what changed.
+const roleRenders = new Map();
+export function renderCached(patch) {
+  const version = useStore.getState().samplesVersion;
+  const hit = roleRenders.get(patch.id);
+  if (hit?.patch === patch && hit.version === version) return hit.promise;
+  const promise = renderPatch(patch, PREVIEW_SR);
+  roleRenders.set(patch.id, { patch, version, promise });
+  return promise;
+}
+
+export function warmRoles() {
+  const ws = useStore.getState().ws;
+  for (const id of ROLE_IDS) {
+    const sound = soundForRole(ws, id);
+    if (sound) renderCached(sound).catch(() => {});
+  }
+}
+
+const roleListeners = new Set();
+export function onRolePlayed(fn) {
+  roleListeners.add(fn);
+  return () => roleListeners.delete(fn);
+}
+
+export async function playRole(roleId) {
+  const sound = soundForRole(useStore.getState().ws, roleId);
+  roleListeners.forEach((fn) => fn({ roleId, sound }));
+  if (!sound) return;
+  try {
+    playResult(await renderCached(sound), { variation: sound.master.variation });
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+const SCENE_GAP_S = 0.35;
+// Plays tap, send, receive and success one after another, the way a user hears them in a flow.
+export async function playScene() {
+  const c = audioCtx();
+  if (!c) return;
+  const ws = useStore.getState().ws;
+  const steps = SCENE.map((roleId) => ({ roleId, sound: soundForRole(ws, roleId) })).filter((x) => x.sound);
+  if (!steps.length) {
+    showToast('Pick sounds for tap, send, receive or success to hear the scene.');
+    return;
+  }
+  const renders = await Promise.all(steps.map((x) => renderCached(x.sound)));
+  let t = c.currentTime + 0.05;
+  steps.forEach((step, i) => {
+    playResult(renders[i], { when: t, variation: step.sound.master.variation });
+    setTimeout(() => roleListeners.forEach((fn) => fn(step)), (t - c.currentTime) * 1000);
+    t += Math.max(renders[i].duration, 0.15) + SCENE_GAP_S;
+  });
 }

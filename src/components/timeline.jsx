@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Maximize2, Minus, Plus } from 'lucide-react';
-import { dbToGain } from '../engine/engine.js';
+import { dbToGain, sampleRates } from '../engine/engine.js';
 import { TYPE_LABEL } from '../engine/model.js';
 import { clipMs, estimateLength } from '../engine/render.js';
 import { samples, sampleDurationMs } from '../engine/samples.js';
@@ -56,11 +56,24 @@ function roundRect(g, x, y, w, h, r) {
 function handlePoints(L, lane, xAt) {
   const top = lane.y + 9;
   const bot = lane.y + lane.h - 9;
-  if (L.type === 'sample') {
-    const [c0, c1] = clipMs(L);
-    return { kind: 'sample', top, bot, left: { x: xAt(c0) }, right: { x: xAt(c1) } };
-  }
   const yPeak = levelToY(L.level, top, bot);
+  if (L.type === 'sample') {
+    // The same envelope as a synth layer, fitted inside the clip: the fade out ends where the audio stops.
+    const [c0, c1] = clipMs(L);
+    const fi = Math.min(c1 - c0, L.fadeIn);
+    const fo = Math.min(c1 - c0 - fi, L.fadeOut);
+    return {
+      kind: 'sample',
+      top,
+      bot,
+      left: { x: xAt(c0) },
+      right: { x: xAt(c1) },
+      start: { x: xAt(c0), y: bot },
+      peak: { x: xAt(c0 + fi), y: yPeak },
+      hold: { x: xAt(c1 - fo), y: yPeak },
+      decay: { x: xAt(c1), y: bot },
+    };
+  }
   const holdEnd = L.start + L.attack + (L.type === 'modal' ? 0 : L.hold);
   return {
     kind: 'synth',
@@ -272,34 +285,35 @@ function dot(g, x, y, c, r = 5) {
 
 function drawHandles(g, L, lane, xAt, c) {
   const hp = handlePoints(L, lane, xAt);
-  g.lineWidth = 1.5;
-  g.strokeStyle = c.hot;
-  if (hp.kind === 'synth') {
-    // The envelope is drawn on a dB scale, so the exponential fade is a straight line to -60 dB.
-    const floorY = levelToY(L.level - 60, hp.top, hp.bot);
-    let endX = hp.decay.x;
-    if (floorY > hp.bot) endX = hp.hold.x + (hp.decay.x - hp.hold.x) * ((hp.bot - hp.hold.y) / (floorY - hp.hold.y));
-    g.beginPath();
-    g.moveTo(hp.start.x, hp.bot);
-    g.lineTo(hp.peak.x, hp.peak.y);
-    g.lineTo(hp.hold.x, hp.hold.y);
-    g.lineTo(endX, Math.min(hp.bot, floorY));
-    g.stroke();
-    g.setLineDash([3, 3]);
-    g.beginPath();
-    g.moveTo(endX, Math.min(hp.bot, floorY));
-    g.lineTo(hp.decay.x, hp.bot);
-    g.stroke();
-    g.setLineDash([]);
-    dot(g, hp.peak.x, hp.peak.y, c);
-    dot(g, hp.decay.x, hp.decay.y, c);
-  } else {
+  if (hp.kind === 'sample') {
     for (const p of [hp.left, hp.right]) {
       g.fillStyle = c.hot;
       roundRect(g, p.x - 2.5, hp.top, 5, hp.bot - hp.top, 2.5);
       g.fill();
     }
   }
+  g.lineWidth = 1.5;
+  g.strokeStyle = c.hot;
+  // The envelope is drawn on a dB scale, so the exponential fade is a straight line to -60 dB.
+  const floorY = levelToY(L.level - 60, hp.top, hp.bot);
+  let endX = hp.decay.x;
+  if (floorY > hp.bot) endX = hp.hold.x + (hp.decay.x - hp.hold.x) * ((hp.bot - hp.hold.y) / (floorY - hp.hold.y));
+  g.beginPath();
+  g.moveTo(hp.start.x, hp.bot);
+  g.lineTo(hp.peak.x, hp.peak.y);
+  g.lineTo(hp.hold.x, hp.hold.y);
+  g.lineTo(endX, Math.min(hp.bot, floorY));
+  g.stroke();
+  g.setLineDash([3, 3]);
+  g.beginPath();
+  g.moveTo(endX, Math.min(hp.bot, floorY));
+  g.lineTo(hp.decay.x, hp.bot);
+  g.stroke();
+  g.setLineDash([]);
+  dot(g, hp.peak.x, hp.peak.y, c);
+  // A clip's fade out is dragged from where it starts, since the clip's end is the trim edge.
+  if (hp.kind === 'sample') dot(g, hp.hold.x, hp.hold.y, c);
+  else dot(g, hp.decay.x, hp.decay.y, c);
 }
 
 function hitTest(geom, x, y) {
@@ -319,6 +333,8 @@ function hitTest(geom, x, y) {
     if (near(hp.decay, 10) || (Math.abs(x - hp.decay.x) < 5 && y > hp.top)) return { kind: 'layer', id: L.id, part: 'decay', lane };
   }
   if (selected && hp.kind === 'sample') {
+    if (near(hp.peak, 9)) return { kind: 'layer', id: L.id, part: 'peak', lane };
+    if (near(hp.hold, 9)) return { kind: 'layer', id: L.id, part: 'fadeOut', lane };
     if (Math.abs(x - hp.left.x) < 7) return { kind: 'layer', id: L.id, part: 'trimL', lane };
     if (Math.abs(x - hp.right.x) < 7) return { kind: 'layer', id: L.id, part: 'trimR', lane };
   }
@@ -426,7 +442,9 @@ export function Timeline() {
         (L) => {
           if (drag.part === 'move') L.start = Math.max(0, snapMs(o.start + dms));
           if (drag.part === 'peak') {
-            L.attack = Math.min(300, Math.max(0.1, snapMs(msAt(e.offsetX) - L.start)));
+            const fade = Math.min(300, Math.max(L.type === 'sample' ? 0 : 0.1, snapMs(msAt(e.offsetX) - L.start)));
+            if (L.type === 'sample') L.fadeIn = fade;
+            else L.attack = fade;
             const top = lane.y + 9;
             const bot = lane.y + lane.h - 9;
             L.level = Math.round(Math.min(LEVEL_MAX_DB, Math.max(LEVEL_MIN_DB, yToLevel(e.offsetY, top, bot))) * 2) / 2;
@@ -435,11 +453,14 @@ export function Timeline() {
             const holdEnd = L.start + L.attack + (L.type === 'modal' ? 0 : L.hold);
             L.decay = Math.min(3000, Math.max(2, snapMs(msAt(e.offsetX) - holdEnd)));
           }
+          if (drag.part === 'fadeOut') L.fadeOut = Math.min(3000, Math.max(0, snapMs(clipMs(L)[1] - msAt(e.offsetX))));
           if (drag.part === 'trimL' || drag.part === 'trimR') {
             const smp = samples.get(L.sampleId);
             if (!smp) return;
             const total = sampleDurationMs(smp);
-            const rate = Math.pow(2, L.pitch / 12);
+            // Each edge moves at the speed the audio plays there: the start rate on the left, the end rate on the right.
+            const { r0, r1 } = sampleRates(L);
+            const rate = drag.part === 'trimL' ? r0 : r1;
             if (drag.part === 'trimL') {
               // Moves the clip's left edge while the audio stays put on the timeline.
               const dl = Math.min(Math.max(dms, -o.start, -o.trimStart / rate), (total - o.trimStart - o.trimEnd - 1) / rate);
@@ -524,7 +545,7 @@ export function TimelineBar() {
   const tip =
     sel?.kind === 'layer'
       ? isSample
-        ? 'Drag the block to move it. Drag its orange edges to trim the audio.'
+        ? 'Drag the block to move it and its orange edges to trim the audio. The first dot sets the fade in and the volume, the second the fade out.'
         : 'Drag the block to move it. Drag the dots: the first sets how fast it starts and how loud, the second how long it lasts.'
       : 'Click a layer to edit it, or keep Output selected to shape the whole sound.';
   return (

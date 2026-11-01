@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Tooltip } from 'radix-ui';
-import { Upload } from 'lucide-react';
+import { Lightbulb, Upload } from 'lucide-react';
 import { handleDroppedFiles, loadStoredSamples } from './io.js';
 import { playCompare, playCurrent, setLoop, startRenderLoop } from './playback.js';
 import {
@@ -9,14 +9,23 @@ import {
   duplicateLayer,
   duplicateSound,
   editLayer,
+  flushSave,
+  followUrl,
   openDialog,
   pasteLayer,
   redo,
   select,
   selectedLayer,
+  setPref,
+  setPreview,
+  setTitle,
+  showToast,
   undo,
   useStore,
 } from './store.js';
+import { Home } from './components/home.jsx';
+import { Button } from './components/ui.jsx';
+import { PreviewPane, SPLIT_MIN_WINDOW, usePreviewMode, usePreviewWidth } from './components/preview.jsx';
 import { TopBar } from './components/top-bar.jsx';
 import { Sidebar, focusSelectedRow } from './components/sidebar.jsx';
 import { Timeline, TimelineBar, fitTimeline, zoomBy } from './components/timeline.jsx';
@@ -31,6 +40,28 @@ function useTheme() {
     if (theme === 'system') root.removeAttribute('data-theme');
     else root.setAttribute('data-theme', theme);
   }, [theme]);
+}
+
+// Keys a native app owns. Cmd+A selects text only in a field or the code view, never the whole
+// interface, and Cmd+S saves instead of opening the browser's "Save page" dialog.
+function useAppKeys() {
+  useEffect(() => {
+    const onKey = (e) => {
+      if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey) return;
+      const key = e.key.toLowerCase();
+      if (key === 'a' && !isTyping(e.target)) {
+        e.preventDefault();
+        const region = e.target.closest?.('[data-selectable]');
+        if (region) window.getSelection()?.selectAllChildren(region);
+      } else if (key === 's') {
+        e.preventDefault();
+        flushSave();
+        showToast('Saved. Earcue saves as you go, too.');
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 }
 
 function isTyping(el) {
@@ -53,6 +84,12 @@ function useShortcuts() {
       const typing = isTyping(e.target);
       const mod = e.metaKey || e.ctrlKey;
       const key = e.key.toLowerCase();
+      // Keys pressed in the preview belong to its UI kit, and while it covers the editor, so do the rest.
+      const previewFull = s.preview === 'full' || (s.preview === 'split' && window.innerWidth < SPLIT_MIN_WINDOW);
+      if (e.target.closest?.('[data-preview]') || previewFull) {
+        if (key === 'p' && !typing && !mod && !e.altKey && s.singleKeys && !ownsKeys(e.target)) setPreview('off');
+        return;
+      }
       if (mod && key === 'z' && !typing) {
         e.preventDefault();
         if (e.shiftKey) redo();
@@ -108,6 +145,7 @@ function useShortcuts() {
       else if (e.key === '-') zoomBy(1 / 1.5);
       else if (e.key === '0') fitTimeline();
       else if (e.key === '?') openDialog('shortcuts');
+      else if (key === 'p') setPreview(s.preview === 'off' ? 'split' : 'off');
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -164,30 +202,88 @@ function Toast() {
   );
 }
 
+// The URL says which set is open, so Back and Forward move between sets and the home page.
+function useNavigation() {
+  const title = useStore(setTitle);
+  useEffect(() => {
+    document.title = title;
+  }, [title]);
+  useEffect(() => {
+    window.addEventListener('popstate', followUrl);
+    window.addEventListener('pagehide', flushSave);
+    return () => {
+      window.removeEventListener('popstate', followUrl);
+      window.removeEventListener('pagehide', flushSave);
+    };
+  }, []);
+}
+
 export function App() {
   useTheme();
-  useShortcuts();
-  const dragging = useFileDrop();
+  useNavigation();
+  useAppKeys();
+  const page = useStore((s) => s.page);
+  const setId = useStore((s) => s.ws?.id);
 
   useEffect(() => {
-    const stop = startRenderLoop();
     loadStoredSamples();
-    return stop;
   }, []);
 
   return (
     <Tooltip.Provider delayDuration={400} skipDelayDuration={150}>
-      <div className="app-grid bg-panel">
+      {page === 'set' ? <Editor key={setId} /> : <Home />}
+      <Toast />
+    </Tooltip.Provider>
+  );
+}
+
+// One tip, shown once: the study found people learn by changing a real sound, not from a tour.
+function FirstTip() {
+  const done = useStore((s) => s.tipDone);
+  if (done) return null;
+  return (
+    <div className="flex shrink-0 items-center gap-2.5 border-b border-line bg-accent-soft/60 px-3 py-2 text-[12.5px] text-ink">
+      <Lightbulb className="size-4 shrink-0 text-accent" />
+      <p className="min-w-0 flex-1">
+        Make a sound yours: pick a layer on the left and drag any slider on the right. Then open <span className="font-medium">Preview</span> to hear the whole set on real UI.
+      </p>
+      <Button variant="secondary" size="sm" onClick={() => setPref({ tipDone: true })}>
+        Got it
+      </Button>
+    </div>
+  );
+}
+
+function Editor() {
+  useShortcuts();
+  const dragging = useFileDrop();
+  const previewMode = usePreviewMode();
+  const previewWidth = usePreviewWidth();
+
+  useEffect(() => startRenderLoop(), []);
+
+  return (
+    <>
+      {/* Full screen, the preview covers the editor, so the editor leaves the tab order until it closes. */}
+      <div
+        className="app-grid bg-panel"
+        data-preview={previewMode === 'split' ? 'split' : undefined}
+        style={{ '--preview-w': `${previewWidth}px` }}
+        inert={previewMode === 'full' ? true : undefined}
+      >
         <TopBar />
         <Sidebar />
         <main className="app-center flex min-h-0 min-w-0 flex-col bg-canvas [grid-area:center]">
+          <FirstTip />
           <TimelineBar />
           <Timeline />
           <MetricsBar />
           <Dock />
         </main>
         <Inspector />
+        {previewMode === 'split' && <PreviewPane mode="split" width={previewWidth} />}
       </div>
+      {previewMode === 'full' && <PreviewPane mode="full" width={previewWidth} />}
       {dragging && (
         <div className="pointer-events-none fixed inset-3 z-50 grid place-items-center rounded-2xl border-2 border-dashed border-accent bg-accent-soft/80">
           <div className="flex flex-col items-center gap-2 text-accent">
@@ -201,7 +297,6 @@ export function App() {
       <ExportDialog />
       <RecordDialog />
       <ShortcutsDialog />
-      <Toast />
-    </Tooltip.Provider>
+    </>
   );
 }

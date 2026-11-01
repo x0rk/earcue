@@ -1,12 +1,13 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Slider, Tabs } from 'radix-ui';
-import { Copy } from 'lucide-react';
+import { CircleAlert, CircleCheck, Copy } from 'lucide-react';
+import { checkSet, describeKey, SCALES } from '../engine/checks.js';
 import { dbToGain } from '../engine/engine.js';
 import { moduleSource } from '../engine/export.js';
-import { fmtHz, fmtHzUnit, fmtLevel, fmtPan } from '../lib/format.js';
-import { comparePatch, results } from '../playback.js';
-import { commit, currentSound, editLayer, editMaster, select, setPref, showToast, useStore } from '../store.js';
-import { Button, hintProps } from './ui.jsx';
+import { fmtHz, fmtHzUnit, fmtLevel, fmtPan, NOTE_NAMES } from '../lib/format.js';
+import { comparePatch, renderCached, results } from '../playback.js';
+import { commit, currentSound, editLayer, editMaster, select, selectSound, setPref, setSetKey, showToast, useStore } from '../store.js';
+import { Button, hintProps, Select } from './ui.jsx';
 import { LayerIcon } from './icons.jsx';
 
 const SPEC_FLOOR_DB = -72;
@@ -284,7 +285,10 @@ function Code() {
           Copy code
         </Button>
       </div>
-      <pre className="min-h-0 flex-1 overflow-auto px-3 pb-3 font-mono text-[11.5px] leading-relaxed text-ink">{src}</pre>
+      {/* Focusable so it scrolls from the keyboard, and Cmd+A inside it selects just the code. */}
+      <pre data-selectable tabIndex={0} aria-label="Generated code" className="min-h-0 flex-1 overflow-auto px-3 pb-3 font-mono text-[11.5px] leading-relaxed text-ink outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent">
+        {src}
+      </pre>
     </div>
   );
 }
@@ -308,8 +312,80 @@ function Legend() {
   );
 }
 
+const CHECK_DELAY_MS = 400;
+
+// Renders every sound in the set, reusing renders of sounds that haven't changed, and checks the family.
+function useSetChecks() {
+  const ws = useStore((s) => s.ws);
+  const samplesVersion = useStore((s) => s.samplesVersion);
+  const [issues, setIssues] = useState(null);
+  useEffect(() => {
+    let live = true;
+    const timer = setTimeout(async () => {
+      try {
+        const renders = await Promise.all(ws.sounds.map(renderCached));
+        if (live) setIssues(checkSet(ws, new Map(ws.sounds.map((p, i) => [p.id, renders[i].m]))));
+      } catch (e) {
+        console.error(e);
+      }
+    }, CHECK_DELAY_MS);
+    return () => {
+      live = false;
+      clearTimeout(timer);
+    };
+  }, [ws, samplesVersion]);
+  return issues;
+}
+
+const ROOTS = NOTE_NAMES.map((n, i) => ({ value: String(i), label: n }));
+const SCALE_ITEMS = [{ value: 'none', label: 'No key' }, ...Object.entries(SCALES).map(([value, s]) => ({ value, label: s.label[0].toUpperCase() + s.label.slice(1) }))];
+
+function Checks({ issues }) {
+  const key = useStore((s) => s.ws.key);
+  return (
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="flex flex-wrap items-center gap-2 border-b border-line px-3 py-1.5 text-[12px] text-muted">
+        <span>Key</span>
+        {key && <Select label="Key note" size="sm" className="w-[64px]" value={String(key.root)} groups={[{ items: ROOTS }]} onChange={(v) => setSetKey({ ...key, root: Number(v) })} />}
+        <Select
+          label="Scale"
+          size="sm"
+          className="w-[156px]"
+          value={key ? key.scale : 'none'}
+          groups={[{ items: SCALE_ITEMS }]}
+          onChange={(v) => setSetKey(v === 'none' ? null : { root: key?.root ?? 0, scale: v })}
+        />
+        <span>{key ? `Notes outside ${describeKey(key)} are flagged.` : 'Pick a key to check that every note in the set fits it.'}</span>
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto px-2 py-1.5">
+        {issues === null ? (
+          <p className="px-1.5 py-2 text-[12.5px] text-muted">Checking the set...</p>
+        ) : !issues.length ? (
+          <p className="flex items-center gap-2 px-1.5 py-2 text-[12.5px] text-muted">
+            <CircleCheck className="size-4 text-noise" />
+            Every sound fits the set: on time, light on bass, the right length and loudness for its role{key ? ', and in key' : ''}.
+          </p>
+        ) : (
+          <ul className="flex flex-col">
+            {issues.map((it) => (
+              <li key={`${it.soundId}:${it.kind}`} className="flex items-start gap-2 rounded-lg px-1.5 py-1.5 text-[12.5px] hover:bg-field">
+                <CircleAlert className="mt-px size-4 shrink-0 text-hot" />
+                <button type="button" className="shrink-0 font-medium text-ink underline-offset-2 hover:underline" onClick={() => selectSound(it.soundId)}>
+                  {it.name}
+                </button>
+                <span className="text-muted">{it.text}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function Dock() {
   const dock = useStore((s) => s.dock);
+  const issues = useSetChecks();
   return (
     <Tabs.Root value={dock} onValueChange={(v) => setPref({ dock: v })} className="flex h-[264px] shrink-0 flex-col border-t border-line bg-panel">
       <Tabs.List className="flex h-10 shrink-0 items-center gap-1 border-b border-line px-2" aria-label="Views">
@@ -317,6 +393,7 @@ export function Dock() {
           ['spectrum', 'Frequencies'],
           ['mixer', 'Mixer'],
           ['code', 'Code'],
+          ['checks', 'Checks'],
         ].map(([value, label]) => (
           <Tabs.Trigger
             key={value}
@@ -324,6 +401,12 @@ export function Dock() {
             className="relative h-10 px-2.5 text-[12.5px] font-medium text-muted hover:text-ink data-[state=active]:text-ink data-[state=active]:after:absolute data-[state=active]:after:inset-x-2 data-[state=active]:after:bottom-0 data-[state=active]:after:h-0.5 data-[state=active]:after:rounded-full data-[state=active]:after:bg-ink"
           >
             {label}
+            {value === 'checks' && issues?.length > 0 && (
+              <span className="ml-1.5 rounded-full bg-hot/15 px-1.5 py-px font-mono text-[11px] text-hot tabular">
+                {issues.length}
+                <span className="sr-only"> to look at</span>
+              </span>
+            )}
           </Tabs.Trigger>
         ))}
         {dock === 'spectrum' && <Legend />}
@@ -336,6 +419,9 @@ export function Dock() {
       </Tabs.Content>
       <Tabs.Content value="code" className="min-h-0 flex-1 outline-none">
         <Code />
+      </Tabs.Content>
+      <Tabs.Content value="checks" className="min-h-0 flex-1 outline-none">
+        <Checks issues={issues} />
       </Tabs.Content>
     </Tabs.Root>
   );

@@ -165,7 +165,10 @@ function packSamples(patches) {
     for (const use of list.sort((x, y) => x.lo - y.lo)) {
       if (span && use.lo <= span.hi) span.hi = Math.max(span.hi, use.hi);
       else {
-        span = { key: spans.has(id) ? `${id}-${spans.size}` : id, s: use.s, lo: use.lo, hi: use.hi };
+        // A key no other span has, even when a clip's own id looks like a numbered one.
+        let key = id;
+        for (let n = 2; spans.has(key); n += 1) key = `${id}-${n}`;
+        span = { key, s: use.s, lo: use.lo, hi: use.hi };
         spans.set(span.key, span);
       }
       use.span = span;
@@ -274,7 +277,7 @@ export function setModuleSource(rendered) {
   const sounds = {};
   rendered.forEach(({ res, base }, i) => {
     let key = base;
-    for (let n = 2; sounds[key]; n += 1) key = `${base}-${n}`;
+    for (let n = 2; Object.hasOwn(sounds, key); n += 1) key = `${base}-${n}`;
     sounds[key] = soundEntry(patches[i], res);
   });
   const names = Object.keys(sounds);
@@ -291,7 +294,7 @@ export function setModuleSource(rendered) {
     'export const soundNames = Object.keys(SOUNDS);',
     '',
     'export function playSound(name, ctx, destination = ctx.destination, when = ctx.currentTime) {',
-    '  const sound = SOUNDS[name];',
+    '  const sound = Object.prototype.hasOwnProperty.call(SOUNDS, name) ? SOUNDS[name] : null;',
     "  if (!sound) throw new Error(`Unknown sound \"${name}\". Available: ${soundNames.join(', ')}`);",
     '  play(sound, ctx, destination, when);',
     '}',
@@ -299,9 +302,11 @@ export function setModuleSource(rendered) {
   ].join('\n');
 }
 
+const audioKind = (info) => (info.format === 'ogg' ? 'Ogg Vorbis file' : `${info.bits}-bit WAV`);
+
 export function setReadme(rendered, info, what) {
   const lines = [`A sound set of ${rendered.length}. Made with ${APP_NAME} on ${new Date().toISOString().slice(0, 10)}.`, ''];
-  if (what === 'wav' || what === 'all') lines.push(`wav/        One ${info.channels === 1 ? 'mono' : 'stereo'} ${info.sampleRate} Hz, ${info.bits}-bit WAV per sound.`);
+  if (what === 'audio' || what === 'all') lines.push(`${info.format}/        One ${info.channels === 1 ? 'mono' : 'stereo'} ${info.sampleRate} Hz ${audioKind(info)} per sound.`);
   if (what === 'code' || what === 'all') lines.push("sounds.js   Plays any sound by name with the Web Audio API: playSound('name', audioContext).");
   if (what === 'all' || what === 'project') lines.push(`projects/   The editable projects. Open them again in ${APP_NAME}.`);
   lines.push('', 'Sounds:');
@@ -327,29 +332,33 @@ export function readPatchFile(text) {
       const s = obj.samples[id];
       if (!s || !Array.isArray(s.channels) || !s.channels.length || !s.channels.every((c) => typeof c === 'string')) continue;
       const rate = Number.isFinite(s.sampleRate) ? Math.min(MAX_SAMPLE_RATE, Math.max(MIN_SAMPLE_RATE, s.sampleRate)) : 48000;
-      storeSample({ id, name: (typeof s.name === 'string' && cleanName(s.name, 120)) || 'Audio', sampleRate: rate, channels: s.channels.slice(0, 2).map(b64ToFloat) });
+      // Channels play side by side, so they are cut to the shortest; audio with an empty channel is left out.
+      const channels = s.channels.slice(0, 2).map(b64ToFloat);
+      const length = Math.min(...channels.map((c) => c.length));
+      if (!length) continue;
+      storeSample({ id, name: (typeof s.name === 'string' && cleanName(s.name, 120)) || 'Audio', sampleRate: rate, channels: channels.map((c) => (c.length > length ? c.slice(0, length) : c)) });
     }
   }
   return patch;
 }
 
 export function readme(patch, base, info) {
+  const audio = `${base}.${info.format}`;
   const col = (file) => file.padEnd(base.length + 8);
   return [
     patch.name,
     `Made with ${APP_NAME} on ${new Date().toISOString().slice(0, 10)}.`,
     '',
-    `${col(`${base}.wav`)}${info.channels === 1 ? 'Mono' : 'Stereo'}, ${info.sampleRate} Hz, ${info.bits}-bit. ${info.ms} ms, peak ${patch.master.out} dBFS.`,
+    `${col(audio)}${info.channels === 1 ? 'Mono' : 'Stereo'}, ${info.sampleRate} Hz ${audioKind(info)}. ${info.ms} ms, peak ${patch.master.out} dBFS.`,
     `${col(`${base}.js`)}Plays the same sound with the Web Audio API, with no audio file.`,
     `${col(`${base}.json`)}The editable project. Open it again with Open project in ${APP_NAME}.`,
     '',
-    'Need a smaller file? Convert the WAV:',
-    `  ffmpeg -i ${base}.wav -c:a libopus -b:a 64k ${base}.ogg`,
-    `  ffmpeg -i ${base}.wav -c:a libmp3lame -q:a 2 ${base}.mp3`,
+    'Need an MP3? Convert the audio file:',
+    `  ffmpeg -i ${audio} -c:a libmp3lame -q:a 2 ${base}.mp3`,
     'MP3 encoders can add a few milliseconds of silence at the start. For UI sounds, WAV or OGG keeps the timing tight.',
     '',
     patch.master.variation
-      ? `Natural variation: up to ${patch.master.variation} cents per play. The .js file applies it for you; the WAV does not include it.`
+      ? `Natural variation: up to ${patch.master.variation} cents per play. The .js file applies it for you; the audio file does not include it.`
       : 'Natural variation: off.',
     '',
   ].join('\n');

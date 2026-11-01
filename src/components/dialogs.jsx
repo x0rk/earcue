@@ -2,13 +2,13 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Collapsible, RadioGroup } from 'radix-ui';
 import { ChevronDown, Code2, FileAudio, FolderArchive, Mic, Package, Play, Plus, Square } from 'lucide-react';
 import { REPO_URL } from '../brand.js';
-import { presets } from '../engine/model.js';
+import { presets, starterSounds } from '../engine/model.js';
 import { decodeToSample, storeSample } from '../engine/samples.js';
 import { slug } from '../engine/export.js';
 import { exportSound } from '../io.js';
 import { audioCtx, previewPatch, results } from '../playback.js';
 import { addSampleLayer, addSound, closeDialog, currentSound, newBlankSound, setPref, showToast, useStore } from '../store.js';
-import { Button, Dialog, Kbd, Segmented, SwitchRow } from './ui.jsx';
+import { Button, Dialog, Kbd, Segmented, Select, SwitchRow } from './ui.jsx';
 
 function useDialog(name) {
   const open = useStore((s) => s.dialog === name);
@@ -16,12 +16,40 @@ function useDialog(name) {
 }
 
 // ---------- new sound ----------
+function TemplateCard({ t }) {
+  return (
+    // Every card starts its title at the same height, however long its description runs.
+    <div className="group relative flex min-h-[92px] flex-col gap-2 rounded-xl border border-line p-3 hover:border-accent hover:bg-accent-soft/40">
+      <button
+        type="button"
+        className="absolute inset-0 rounded-xl"
+        aria-label={`Use ${t.name}`}
+        onClick={() => {
+          addSound(t);
+          closeDialog();
+        }}
+      />
+      <span className="pointer-events-none flex h-4 items-center text-[11.5px] text-muted">{t.layers.length} layer{t.layers.length > 1 ? 's' : ''}</span>
+      <span className="pointer-events-none pr-8">
+        <span className="block text-[13px] font-semibold">{t.name}</span>
+        <span className="block text-[12px] text-muted">{t.description}</span>
+      </span>
+      <Button variant="secondary" size="iconSm" className="absolute right-2 top-2 z-10 rounded-full" aria-label={`Hear ${t.name}`} onClick={() => previewPatch(t)}>
+        <Play className="!size-3 fill-current" />
+      </Button>
+    </div>
+  );
+}
+
+const GRID = 'grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3';
+
 export function NewSoundDialog() {
   const [open, onOpenChange] = useDialog('new');
+  const basics = useMemo(() => starterSounds(), [open]);
   const templates = useMemo(() => presets(), [open]);
   return (
     <Dialog open={open} onOpenChange={onOpenChange} title="New sound" description="Start from a template and change anything, or start blank." width={720}>
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+      <div className={GRID}>
         <button
           type="button"
           className="flex min-h-[92px] flex-col items-start gap-2 rounded-xl border border-dashed border-line-strong p-3 text-left hover:border-accent hover:bg-accent-soft/40"
@@ -36,27 +64,17 @@ export function NewSoundDialog() {
             <span className="block text-[12px] text-muted">One simple tone to build from.</span>
           </span>
         </button>
+      </div>
+      <h3 className="mb-2 mt-5 text-[12px] font-semibold text-ink">The basics</h3>
+      <div className={GRID}>
+        {basics.map((t) => (
+          <TemplateCard key={t.name} t={t} />
+        ))}
+      </div>
+      <h3 className="mb-2 mt-5 text-[12px] font-semibold text-ink">More templates</h3>
+      <div className={GRID}>
         {templates.map((t) => (
-          // Every card starts its title at the same height, however long its description runs.
-          <div key={t.name} className="group relative flex min-h-[92px] flex-col gap-2 rounded-xl border border-line p-3 hover:border-accent hover:bg-accent-soft/40">
-            <button
-              type="button"
-              className="absolute inset-0 rounded-xl"
-              aria-label={`Use ${t.name}`}
-              onClick={() => {
-                addSound(t);
-                closeDialog();
-              }}
-            />
-            <span className="pointer-events-none flex h-4 items-center text-[11.5px] text-muted">{t.layers.length} layer{t.layers.length > 1 ? 's' : ''}</span>
-            <span className="pointer-events-none pr-8">
-              <span className="block text-[13px] font-semibold">{t.name}</span>
-              <span className="block text-[12px] text-muted">{t.description}</span>
-            </span>
-            <Button variant="secondary" size="iconSm" className="absolute right-2 top-2 z-10 rounded-full" aria-label={`Hear ${t.name}`} onClick={() => previewPatch(t)}>
-              <Play className="!size-3 fill-current" />
-            </Button>
-          </div>
+          <TemplateCard key={t.name} t={t} />
         ))}
       </div>
     </Dialog>
@@ -65,19 +83,26 @@ export function NewSoundDialog() {
 
 // ---------- export ----------
 const WHAT = [
-  { value: 'wav', icon: FileAudio, title: 'Audio file', ext: '.wav', body: 'Works everywhere: design tools, apps, games.' },
+  { value: 'audio', icon: FileAudio, title: 'Audio file', body: 'For design tools, apps and games.' },
   { value: 'code', icon: Code2, title: 'Code', ext: '.js', body: 'Plays the sound in a web app with no audio file.' },
   { value: 'all', icon: Package, title: 'Everything', ext: '.zip', body: 'The audio, the code and the editable project.' },
   { value: 'project', icon: FolderArchive, title: 'Project', ext: '.json', body: 'Open it here again later, or share it.' },
 ];
 
+const FORMAT_NOTE = {
+  wav: 'Lossless. Opens in every design tool, audio app and game engine.',
+  ogg: 'Much smaller than a WAV. Plays in current browsers, on Android and in game engines like Godot and Unity. Safari needs version 18.4 or later.',
+};
+
 export function ExportDialog() {
   const [open, onOpenChange] = useDialog('export');
   const P = useStore((s) => currentSound(s));
   const sounds = useStore((s) => s.ws.sounds);
+  const soundSetName = useStore((s) => s.ws.name);
   const count = sounds.length;
   const [scope, setScope] = useState('sound');
-  const [what, setWhat] = useState('wav');
+  const [what, setWhat] = useState('audio');
+  const [format, setFormat] = useState('wav');
   const [name, setName] = useState('');
   const [channels, setChannels] = useState(1);
   const [sampleRate, setSampleRate] = useState(48000);
@@ -86,18 +111,20 @@ export function ExportDialog() {
   const [advanced, setAdvanced] = useState(false);
 
   useEffect(() => {
-    if (open) setName(scope === 'set' ? 'sound-set' : slug(P.name));
-  }, [open, scope, P.name]);
+    if (open) setName(slug(scope === 'set' ? soundSetName : P.name));
+  }, [open, scope, P.name, soundSetName]);
 
   const res = results.get(P.id);
-  const ext = scope === 'set' ? '.zip' : WHAT.find((w) => w.value === what).ext;
+  const hasAudio = what === 'audio' || what === 'all';
+  const extOf = (w) => w.ext || `.${format}`;
+  const ext = scope === 'set' ? '.zip' : extOf(WHAT.find((w) => w.value === what));
   const empty = scope === 'sound' && !P.layers.length;
   const keepsClips = (what === 'project' || what === 'all') && (scope === 'set' ? sounds : [P]).some((p) => p.layers.some((L) => L.type === 'sample'));
 
   const run = async () => {
     setBusy(true);
     try {
-      await exportSound({ what, scope, name, channels, sampleRate, bits });
+      await exportSound({ what, scope, name, format, channels, sampleRate, bits });
       showToast('Exported. Check your downloads.');
       closeDialog();
     } catch (e) {
@@ -115,7 +142,7 @@ export function ExportDialog() {
       title="Export"
       description={
         scope === 'set'
-          ? `All ${count} sounds in your set, in one .zip.`
+          ? `All ${count} sounds in ${soundSetName}, in one .zip.`
           : empty
             ? `${P.name} has no layers yet, so there is nothing to export.`
             : res
@@ -159,7 +186,7 @@ export function ExportDialog() {
                 <Icon className={`mt-0.5 size-4 shrink-0 ${active ? 'text-accent' : 'text-muted'}`} />
                 <span>
                   <span className="block text-[13px] font-semibold">
-                    {w.title} <span className="font-mono text-[11.5px] font-normal text-muted">{scope === 'set' ? 'in .zip' : w.ext}</span>
+                    {w.title} <span className="font-mono text-[11.5px] font-normal text-muted">{scope === 'set' ? 'in .zip' : extOf(w)}</span>
                   </span>
                   <span className="block text-[12px] text-muted">{w.body}</span>
                 </span>
@@ -167,6 +194,20 @@ export function ExportDialog() {
             );
           })}
         </RadioGroup.Root>
+        {hasAudio && (
+          <div className="flex flex-col gap-1.5">
+            <Segmented
+              label="File type"
+              value={format}
+              onChange={setFormat}
+              options={[
+                { value: 'wav', label: 'WAV' },
+                { value: 'ogg', label: 'OGG' },
+              ]}
+            />
+            <p className="pl-[76px] text-[12px] text-muted">{FORMAT_NOTE[format]}</p>
+          </div>
+        )}
         {keepsClips && <p className="text-[12px] text-muted">Project files keep each recording whole, trimmed parts included, so you can change the trims later. Code exports include only the part that plays.</p>}
         <label className="flex items-center gap-2 text-[12.5px] text-muted">
           <span className="w-[68px] shrink-0">File name</span>
@@ -175,10 +216,10 @@ export function ExportDialog() {
             <span className="font-mono text-[12px] text-muted">{ext}</span>
           </span>
         </label>
-        {what !== 'project' && what !== 'code' && (
+        {hasAudio && (
           <Collapsible.Root open={advanced} onOpenChange={setAdvanced}>
             <Collapsible.Trigger className="inline-flex items-center gap-1 text-[12px] text-muted hover:text-ink">
-              Audio format: {channels === 1 ? 'mono' : 'stereo'}, {sampleRate / 1000} kHz, {bits}-bit
+              Audio format: {channels === 1 ? 'mono' : 'stereo'}, {sampleRate / 1000} kHz{format === 'wav' ? `, ${bits}-bit` : ''}
               <ChevronDown className={`size-3.5 transition-transform ${advanced ? 'rotate-180' : ''}`} />
             </Collapsible.Trigger>
             <Collapsible.Content className="mt-3 flex flex-col gap-2">
@@ -201,16 +242,18 @@ export function ExportDialog() {
                   { value: 44100, label: '44.1 kHz' },
                 ]}
               />
-              <Segmented
-                label="Bit depth"
-                value={bits}
-                onChange={setBits}
-                options={[
-                  { value: 24, label: '24-bit' },
-                  { value: 16, label: '16-bit' },
-                ]}
-              />
-              <p className="text-[12px] text-muted">Need MP3 or OGG? Export a WAV and convert it. MP3 can add a few milliseconds of silence at the start, which makes UI sounds feel late.</p>
+              {format === 'wav' && (
+                <Segmented
+                  label="Bit depth"
+                  value={bits}
+                  onChange={setBits}
+                  options={[
+                    { value: 24, label: '24-bit' },
+                    { value: 16, label: '16-bit' },
+                  ]}
+                />
+              )}
+              <p className="text-[12px] text-muted">Need an MP3? Export a WAV and convert it. MP3 can add a few milliseconds of silence at the start, which makes UI sounds feel late.</p>
             </Collapsible.Content>
           </Collapsible.Root>
         )}
@@ -223,8 +266,31 @@ export function ExportDialog() {
 const MAX_RECORD_MS = 10000;
 const RECORD_INTRO = `Tap a desk, a cup or a key near your microphone. Recording stops after ${MAX_RECORD_MS / 1000} seconds.`;
 
+// Browsers name their microphones only after you allow one, so the list fills in after the first recording.
+function useMicrophones(open) {
+  const [mics, setMics] = useState([]);
+  const list = async () => {
+    try {
+      const all = (await navigator.mediaDevices?.enumerateDevices?.()) || [];
+      setMics(all.filter((d) => d.kind === 'audioinput' && d.deviceId && !['default', 'communications'].includes(d.deviceId)));
+    } catch {
+      setMics([]);
+    }
+  };
+  useEffect(() => {
+    if (!open) return undefined;
+    list();
+    navigator.mediaDevices?.addEventListener?.('devicechange', list);
+    return () => navigator.mediaDevices?.removeEventListener?.('devicechange', list);
+  }, [open]);
+  return [mics, list];
+}
+
 export function RecordDialog() {
   const [open, onOpenChange] = useDialog('record');
+  const [mics, refreshMics] = useMicrophones(open);
+  const micId = useStore((s) => s.micId);
+  const chosenMic = mics.some((m) => m.deviceId === micId) ? micId : null;
   const [state, setState] = useState('idle');
   const [message, setMessage] = useState(RECORD_INTRO);
   const [level, setLevel] = useState(0);
@@ -261,7 +327,10 @@ export function RecordDialog() {
     setState('starting');
     let stream;
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, ...(chosenMic ? { deviceId: { exact: chosenMic } } : {}) },
+      });
+      refreshMics();
     } catch {
       if (attempt.cancelled) return;
       setMessage('Microphone access was blocked. Allow it in your browser settings and try again.');
@@ -335,6 +404,18 @@ export function RecordDialog() {
         <p className="text-center text-[12.5px] text-muted" role="status">
           {state === 'saving' ? 'Adding your recording...' : state === 'starting' ? 'Waiting for the microphone...' : message}
         </p>
+        {mics.length > 1 && (
+          <div className="w-full">
+            <Select
+              label="Microphone"
+              size="sm"
+              className="w-full"
+              value={chosenMic || 'default'}
+              groups={[{ items: [{ value: 'default', label: 'Default microphone' }, ...mics.map((m, i) => ({ value: m.deviceId, label: m.label || `Microphone ${i + 1}` }))] }]}
+              onChange={(v) => setPref({ micId: v === 'default' ? null : v })}
+            />
+          </div>
+        )}
       </div>
     </Dialog>
   );
@@ -345,6 +426,7 @@ const SHORTCUTS = [
   ['Space', 'Play the current sound'],
   ['B', 'Play the comparison'],
   ['L', 'Loop on or off'],
+  ['P', 'Preview on or off'],
   ['⌘Z / ⇧⌘Z', 'Undo / redo'],
   ['⌘C / ⌘V', 'Copy / paste a layer, also into another sound'],
   ['⌘D', 'Duplicate the selected layer'],

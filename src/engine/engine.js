@@ -195,25 +195,46 @@ export function buildSourceModal(ctx, out, L, t) {
   return { pitchParams, stop: (at) => nodes.forEach((n) => n.stop(at)) };
 }
 
+// How many seconds len seconds of audio take to play when the speed slides exponentially from r0 to
+// r1 over g seconds and then holds at r1.
+export function slideDuration(len, r0, r1, g) {
+  if (!(g > 0) || r0 === r1) return len / r0;
+  const k = Math.log(r1 / r0);
+  const during = (g * (r1 - r0)) / k;
+  if (len <= during) return (g / k) * Math.log(1 + (len * k) / (r0 * g));
+  return g + (len - during) / r1;
+}
+
+export function sampleRates(L) {
+  const r0 = Math.pow(2, L.pitch / 12);
+  const slides = L.glide > 0 && L.slideTo !== L.pitch;
+  return { r0, r1: slides ? Math.pow(2, L.slideTo / 12) : r0, g: slides ? L.glide / 1000 : 0 };
+}
+
 export function buildSourceSample(ctx, amp, L, t, env) {
   const sample = env && env.samples ? env.samples.get(L.sampleId) : null;
   if (!sample) return { end: t, pitchParams: [] };
   const buf = sampleToBuffer(ctx, sample, L.reverse);
   const offset = Math.min(buf.duration, Math.max(0, L.trimStart / 1000));
   const playLen = Math.max(0.001, buf.duration - offset - Math.max(0, L.trimEnd / 1000));
-  const rate = Math.pow(2, L.pitch / 12);
+  const { r0, r1, g } = sampleRates(L);
   const src = ctx.createBufferSource();
   src.buffer = buf;
-  src.playbackRate.value = rate;
+  src.playbackRate.setValueAtTime(r0, t);
+  if (g > 0) src.playbackRate.exponentialRampToValueAtTime(r1, t + g);
   src.connect(amp);
-  const dur = playLen / rate;
+  const dur = slideDuration(playLen, r0, r1, g);
   const end = t + dur;
-  const fi = Math.min(dur / 2, L.fadeIn / 1000);
-  const fo = Math.min(dur / 2, L.fadeOut / 1000);
+  // Fade in like a synth layer's attack, then fade out over the end of the clip, reaching -60 dB as it stops.
+  const fi = Math.min(dur, L.fadeIn / 1000);
+  const fo = Math.min(dur - fi, L.fadeOut / 1000);
   amp.gain.setValueAtTime(fi > 0 ? 0 : 1, t);
   if (fi > 0) amp.gain.linearRampToValueAtTime(1, t + fi);
-  amp.gain.setValueAtTime(1, end - fo);
-  amp.gain.linearRampToValueAtTime(0, end);
+  if (fo > 0) {
+    amp.gain.setValueAtTime(1, end - fo);
+    amp.gain.setTargetAtTime(0, end - fo, t60ToTau(fo * 1000));
+  }
+  amp.gain.setValueAtTime(0, end);
   src.start(t, offset, playLen);
   return { end, pitchParams: [src.detune] };
 }
@@ -413,7 +434,7 @@ export function varyPatch(patch, cents) {
     layers: patch.layers.map((L) => {
       if (L.type === 'tone') return Object.assign({}, L, { pitchStart: L.pitchStart * r, pitchEnd: L.pitchEnd * r });
       if (L.type === 'modal') return Object.assign({}, L, { freq: L.freq * r });
-      if (L.type === 'sample') return Object.assign({}, L, { pitch: L.pitch + cents / 100 });
+      if (L.type === 'sample') return Object.assign({}, L, { pitch: L.pitch + cents / 100, slideTo: L.slideTo + cents / 100 });
       return L;
     }),
   });

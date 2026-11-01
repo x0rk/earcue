@@ -1,0 +1,282 @@
+// @vitest-environment jsdom
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { blankPatch, layerDefaults, starterSounds } from '../src/engine/model.js';
+
+const setKey = (id) => `earcue:set:${id}:v1`;
+const META_KEY = 'earcue:meta:v1';
+const LEGACY_KEY = 'earcue:workspace:v1';
+const STARTER_NAMES = ['Tap', 'Toggle on', 'Toggle off', 'Send', 'Receive', 'Success', 'Error', 'Notification'];
+const STARTER_KEY = { root: 10, scale: 'major-pentatonic' };
+
+// store.js seeds storage and reads the URL as it loads, so each test sets both up and imports a fresh copy.
+async function reloadStore(url = '/') {
+  window.history.replaceState(null, '', url);
+  vi.resetModules();
+  return import('../src/store.js');
+}
+
+async function freshStore({ url, saved = {} } = {}) {
+  localStorage.clear();
+  for (const [key, value] of Object.entries(saved)) localStorage.setItem(key, JSON.stringify(value));
+  return reloadStore(url);
+}
+
+async function openStarter() {
+  const store = await freshStore();
+  store.openSet(store.listSets()[0].id);
+  return store;
+}
+
+const state = (store) => store.useStore.getState();
+const allIds = (set) => set.sounds.flatMap((p) => [p.id, ...p.layers.map((L) => L.id)]);
+const shared = (a, b) => allIds(a).filter((id) => allIds(b).includes(id));
+
+// Fake timers hold back the debounced saves and toasts, so none of them fire into a later test.
+beforeEach(() => {
+  vi.useFakeTimers();
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+  vi.restoreAllMocks();
+});
+
+describe('first visit', () => {
+  it('creates one starter set with eight sounds and the starter key', async () => {
+    const store = await freshStore();
+    const sets = store.listSets();
+    expect(sets.map((s) => s.name)).toEqual(['Starter set']);
+    expect(sets[0].sounds.map((s) => s.name)).toEqual(STARTER_NAMES);
+    expect(store.readSet(sets[0].id).key).toEqual(STARTER_KEY);
+    expect(JSON.parse(localStorage.getItem(META_KEY))).toEqual({ seeded: true });
+    expect(state(store).page).toBe('home');
+  });
+
+  it('keeps the sounds from before sets existed as a set named My sounds', async () => {
+    const legacy = { sounds: [{ ...blankPatch('Old beep'), id: 'old-1' }], current: 'old-1' };
+    const store = await freshStore({ saved: { [LEGACY_KEY]: legacy } });
+    const sets = store.listSets();
+    expect(sets.map((s) => s.name)).toEqual(['My sounds', 'Starter set']);
+    expect(sets[0].sounds).toEqual([{ id: 'old-1', name: 'Old beep' }]);
+    expect(localStorage.getItem(LEGACY_KEY)).toBeNull();
+  });
+
+  it('does not seed again on a later visit', async () => {
+    const first = await freshStore();
+    first.deleteSet(first.listSets()[0].id);
+    const later = await reloadStore();
+    expect(later.listSets()).toEqual([]);
+  });
+
+  it('opens the set named in the URL', async () => {
+    const store = await freshStore({ url: '/?set=shop', saved: { [setKey('shop')]: { name: 'Shop', sounds: [blankPatch('Buy')] } } });
+    expect(state(store).page).toBe('set');
+    expect(state(store).ws.name).toBe('Shop');
+  });
+});
+
+describe('sets', () => {
+  it('createSet with a blank start saves one sound, opens the set and puts it in the URL', async () => {
+    const store = await freshStore();
+    store.createSet('Checkout', 'blank');
+    const { page, ws } = state(store);
+    expect(page).toBe('set');
+    expect(ws.name).toBe('Checkout');
+    expect(ws.sounds.map((p) => p.name)).toEqual(['Untitled sound']);
+    expect(ws.key).toBeNull();
+    expect(window.location.search).toBe(`?set=${ws.id}`);
+    expect(JSON.parse(localStorage.getItem(setKey(ws.id))).sounds).toHaveLength(1);
+  });
+
+  it('createSet from the starter sounds keeps the starter key', async () => {
+    const store = await freshStore();
+    store.createSet('Product', 'starter');
+    const { ws } = state(store);
+    expect(ws.sounds.map((p) => p.name)).toEqual(STARTER_NAMES);
+    expect(store.readSet(ws.id).key).toEqual(STARTER_KEY);
+  });
+
+  it('createSet picks a free name', async () => {
+    const store = await freshStore();
+    store.createSet('Starter set', 'blank');
+    expect(state(store).ws.name).toBe('Starter set 2');
+  });
+
+  it('importSet opens a new set with fresh ids', async () => {
+    const store = await freshStore();
+    const patches = starterSounds().slice(0, 2);
+    store.importSet('Imported', patches);
+    const { page, ws, toast } = state(store);
+    expect(page).toBe('set');
+    expect(ws.name).toBe('Imported');
+    expect(ws.sounds.map((p) => p.name)).toEqual(['Tap', 'Toggle on']);
+    expect(shared(ws, { sounds: patches })).toEqual([]);
+    expect(window.location.search).toBe(`?set=${ws.id}`);
+    expect(toast.text).toBe('Imported 2 sounds as Imported.');
+  });
+
+  it('renameSet renames a saved set and ignores a blank name', async () => {
+    const store = await freshStore();
+    const [starter] = store.listSets();
+    store.renameSet(starter.id, '  Shop\n');
+    expect(store.readSet(starter.id).name).toBe('Shop');
+    store.renameSet(starter.id, ' \t ');
+    expect(store.readSet(starter.id).name).toBe('Shop');
+  });
+
+  it('duplicateSet copies the sounds with fresh sound and layer ids', async () => {
+    const store = await freshStore();
+    const [starter] = store.listSets();
+    store.duplicateSet(starter.id);
+    const original = store.readSet(starter.id);
+    const copy = store.readSet(store.listSets().find((s) => s.name === 'Starter set copy').id);
+    expect(copy.sounds.map((p) => p.name)).toEqual(STARTER_NAMES);
+    expect(shared(copy, original)).toEqual([]);
+    expect(copy.key).toEqual(original.key);
+  });
+
+  it('duplicateSet points role picks at the copied sounds', async () => {
+    const store = await openStarter();
+    const { ws } = state(store);
+    const send = ws.sounds.find((p) => p.name === 'Send');
+    store.setRole('tap', send.id);
+    store.setRole('hover', null);
+    store.goHome();
+    store.duplicateSet(ws.id);
+    const copy = store.readSet(store.listSets().find((s) => s.name === 'Starter set copy').id);
+    const copiedSend = copy.sounds.find((p) => p.name === 'Send');
+    expect(copiedSend.id).not.toBe(send.id);
+    expect(copy.roles).toEqual({ tap: copiedSend.id, hover: null });
+  });
+
+  it('deleteSet removes the saved set', async () => {
+    const store = await freshStore();
+    const [starter] = store.listSets();
+    store.deleteSet(starter.id);
+    expect(localStorage.getItem(setKey(starter.id))).toBeNull();
+    expect(store.listSets()).toEqual([]);
+  });
+
+  it('listSets puts the most recently edited set first', async () => {
+    vi.setSystemTime(1000);
+    const store = await freshStore();
+    const [starter] = store.listSets();
+    vi.setSystemTime(2000);
+    store.createSet('Second', 'blank');
+    expect(store.listSets().map((s) => s.name)).toEqual(['Second', 'Starter set']);
+    vi.setSystemTime(3000);
+    store.renameSet(starter.id, 'Renamed');
+    expect(store.listSets().map((s) => s.name)).toEqual(['Renamed', 'Second']);
+  });
+
+  it('sampleIdsInSets collects the audio every saved set uses', async () => {
+    const store = await freshStore();
+    const recording = (sampleId) => ({ ...blankPatch('Rec'), layers: [{ ...layerDefaults('sample'), sampleId }] });
+    localStorage.setItem(setKey('one'), JSON.stringify({ name: 'One', sounds: [recording('s-a'), recording('s-b')] }));
+    localStorage.setItem(setKey('two'), JSON.stringify({ name: 'Two', sounds: [recording('s-b'), blankPatch('Beep'), recording('s-c')] }));
+    expect(store.sampleIdsInSets()).toEqual(new Set(['s-a', 's-b', 's-c']));
+  });
+});
+
+describe('when storage is full', () => {
+  it('keeps sets in memory and still lists them', async () => {
+    localStorage.clear();
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('The quota has been exceeded.', 'QuotaExceededError');
+    });
+    const store = await reloadStore();
+    expect(store.listSets().map((s) => s.name)).toEqual(['Starter set']);
+    store.createSet('Offline', 'blank');
+    expect(state(store).ws.name).toBe('Offline');
+    expect(store.listSets().map((s) => s.name)).toEqual(['Offline', 'Starter set']);
+    expect(localStorage).toHaveLength(0);
+  });
+});
+
+describe('openSet', () => {
+  it('goes home with a toast when the set is not saved here', async () => {
+    const store = await freshStore({ url: '/?set=gone' });
+    store.openSet('gone');
+    expect(state(store).page).toBe('home');
+    expect(state(store).toast.text).toBe("That set isn't saved in this browser.");
+    expect(window.location.search).toBe('');
+  });
+});
+
+describe('history', () => {
+  it('undoes and redoes edits, with a whole drag as one step', async () => {
+    const store = await openStarter();
+    const { id } = store.currentSound().layers[0];
+    const level = () => store.currentSound().layers[0].level;
+    const before = level();
+    for (const v of [-4, -5, -6]) store.editLayer(id, (L) => void (L.level = v), false);
+    store.commit();
+    expect(level()).toBe(-6);
+    store.undo();
+    expect(level()).toBe(before);
+    expect(state(store)).toMatchObject({ canUndo: false, canRedo: true });
+    store.redo();
+    expect(level()).toBe(-6);
+  });
+
+  it('saves edits shortly after they happen', async () => {
+    const store = await openStarter();
+    store.edit((ws) => void (ws.name = 'Edited'));
+    vi.runOnlyPendingTimers();
+    expect(store.readSet(state(store).ws.id).name).toBe('Edited');
+  });
+
+  it('starts another set with a history of its own', async () => {
+    const store = await openStarter();
+    store.edit((ws) => void (ws.name = 'Edited'));
+    store.createSet('Other', 'blank');
+    expect(state(store)).toMatchObject({ canUndo: false, canRedo: false });
+    store.undo();
+    expect(state(store).ws.name).toBe('Other');
+  });
+
+  it("keeps a set's history after you leave and come back", async () => {
+    const store = await freshStore();
+    const [starter] = store.listSets();
+    store.createSet('B', 'blank');
+    const b = state(store).ws.id;
+    store.openSet(starter.id);
+    store.edit((ws) => void (ws.name = 'Edited'));
+    store.goHome();
+    store.openSet(b);
+    store.openSet(starter.id);
+    expect(state(store).ws.name).toBe('Edited');
+    expect(state(store).canUndo).toBe(true);
+    store.undo();
+    expect(state(store).ws.name).toBe('Starter set');
+  });
+
+  it('undoes a change of key', async () => {
+    const store = await openStarter();
+    store.setSetKey({ root: 0, scale: 'minor' });
+    expect(state(store).ws.key).toEqual({ root: 0, scale: 'minor' });
+    store.undo();
+    expect(state(store).ws.key).toEqual(STARTER_KEY);
+  });
+});
+
+describe('setRole', () => {
+  it('saves a picked sound and a silent role with the set', async () => {
+    const store = await openStarter();
+    const { ws } = state(store);
+    const send = ws.sounds.find((p) => p.name === 'Send');
+    store.setRole('tap', send.id);
+    store.setRole('hover', null);
+    vi.runOnlyPendingTimers();
+    expect(store.readSet(ws.id).roles).toEqual({ tap: send.id, hover: null });
+  });
+
+  it('drops a role set to undefined, so it matches by name again', async () => {
+    const store = await openStarter();
+    store.setRole('tap', null);
+    store.setRole('tap', undefined);
+    vi.runOnlyPendingTimers();
+    expect(state(store).ws.roles).toEqual({});
+    expect(store.readSet(state(store).ws.id).roles).toEqual({});
+  });
+});

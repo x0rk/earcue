@@ -108,36 +108,63 @@ function LayerInspector({ L }) {
       </Header>
 
       {L.type === 'sample' ? (
-        <Section
-          id="clip"
-          title="Audio clip"
-          more={[
-            layerField(L, 'fadeIn', { label: 'Fade in', min: 0, max: 200, ...ms, hint: 'Softens the very start of the clip so it does not click.' }),
-            layerField(L, 'fadeOut', { label: 'Fade out', min: 0, max: 500, ...ms, hint: 'Softens the end of the clip.' }),
-            <SwitchRow key="rev" label="Play backwards" checked={L.reverse} onChange={(v) => editLayer(L.id, (d) => void (d.reverse = v))} hint="Reverses the audio. Trims apply to the reversed clip." />,
-          ]}
-        >
-          <p className="px-0.5 text-[12px] text-muted">
-            {sample
-              ? `${L.sampleName || sample.name} · ${Math.round(totalMs)} ms · ${sample.channels.length === 2 ? 'stereo' : 'mono'}`
-              : 'The audio for this layer is not in this browser. Add the file again.'}
-          </p>
-          {layerField(L, 'start', { label: 'Starts at', min: 0, max: 1000, ...ms, hint: 'When this layer begins, counted from the start of the sound.' })}
-          {layerField(L, 'trimStart', { label: 'Trim start', min: 0, max: Math.max(1, totalMs), ...ms, hint: 'Cuts time off the beginning of the audio. New audio is trimmed to where the sound begins.' })}
-          {layerField(L, 'trimEnd', { label: 'Trim end', min: 0, max: Math.max(1, totalMs), ...ms, hint: 'Cuts time off the end of the audio.' })}
-          {layerField(L, 'pitch', {
-            label: 'Pitch',
-            min: -24,
-            max: 24,
-            step: 0.01,
-            digits: 2,
-            unit: 'st',
-            bipolar: true,
-            format: (v) => fmtSigned(v, 2),
-            hint: 'Plays the audio higher or lower, in semitones. Like a tape, higher also makes it shorter.',
-          })}
-          <TooLongNote L={L} />
-        </Section>
+        <>
+          <Section id="clip" title="Audio clip">
+            <p className="px-0.5 text-[12px] text-muted">
+              {sample
+                ? `${L.sampleName || sample.name} · ${Math.round(totalMs)} ms · ${sample.channels.length === 2 ? 'stereo' : 'mono'}`
+                : 'The audio for this layer is not in this browser. Add the file again.'}
+            </p>
+            {layerField(L, 'trimStart', { label: 'Trim start', min: 0, max: Math.max(1, totalMs), ...ms, hint: 'Cuts time off the beginning of the audio. New audio is trimmed to where the sound begins.' })}
+            {layerField(L, 'trimEnd', { label: 'Trim end', min: 0, max: Math.max(1, totalMs), ...ms, hint: 'Cuts time off the end of the audio.' })}
+            <SwitchRow label="Play backwards" checked={L.reverse} onChange={(v) => editLayer(L.id, (d) => void (d.reverse = v))} hint="Reverses the audio. Trims apply to the reversed clip." />
+          </Section>
+          <Section id="shape" title="Shape">
+            {layerField(L, 'start', { label: 'Starts at', min: 0, max: 1000, ...ms, hint: 'When this layer begins, counted from the start of the sound.' })}
+            {layerField(L, 'fadeIn', {
+              label: 'Fade in',
+              min: 0.1,
+              max: 300,
+              log: true,
+              ...ms,
+              hint: 'How fast the clip reaches full volume. A few milliseconds softens a click at the start; longer swells it in. Audio people call this attack.',
+            })}
+            {layerField(L, 'fadeOut', {
+              label: 'Fade out',
+              min: 0.1,
+              max: 3000,
+              log: true,
+              ...ms,
+              hint: 'Fades the end of the clip away. Longer starts the fade earlier, so a ringing recording dies away sooner and softer. Trim end sets where it stops.',
+            })}
+            <TooLongNote L={L} />
+          </Section>
+          <Section id="audio-pitch" title="Pitch">
+            {layerField(L, 'pitch', {
+              label: 'Pitch',
+              min: -24,
+              max: 24,
+              step: 0.01,
+              digits: 2,
+              unit: 'st',
+              bipolar: true,
+              format: (v) => fmtSigned(v, 2),
+              hint: 'Plays the audio higher or lower, in semitones. Like a tape, higher also makes it shorter.',
+            })}
+            {layerField(L, 'slideTo', {
+              label: 'Slides to',
+              min: -24,
+              max: 24,
+              step: 0.01,
+              digits: 2,
+              unit: 'st',
+              bipolar: true,
+              format: (v) => fmtSigned(v, 2),
+              hint: 'The pitch it slides to, in semitones. Sliding down feels like a drop or a thud; sliding up feels like a pop or a lift.',
+            })}
+            {layerField(L, 'glide', { label: 'Slide time', min: 0, max: 400, step: 0.5, digits: 1, unit: 'ms', hint: 'How long the slide takes. At 0 there is no slide and the audio stays at Pitch.' })}
+          </Section>
+        </>
       ) : (
         <Section
           id="shape"
