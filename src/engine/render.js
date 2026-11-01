@@ -1,5 +1,5 @@
 import { dbToGain, buildLayer, sampleRates, scheduleSound, slideDuration } from './engine.js';
-import { sampleSource, withCleanup } from './cleanup.js';
+import { lookupSample, sampleSource, withCleanup } from './cleanup.js';
 import { fft } from './fft.js';
 import { samples, sampleDurationMs } from './samples.js';
 
@@ -8,8 +8,9 @@ export const MAX_RENDER_MS = MAX_RENDER_S * 1000;
 const TAIL_THRESHOLD = 0.001; // -60 dB below peak: where the file is trimmed
 const AUDIBLE_THRESHOLD = 0.01; // -40 dB below peak: what counts as audible
 
+// Looks the clip up through clean up too, since renders measure layers that point at cleaned copies.
 export function sampleClipMs(L) {
-  const s = samples.get(L.sampleId);
+  const s = lookupSample(L.sampleId);
   if (!s) return 20;
   const { r0, r1, g } = sampleRates(L);
   return slideDuration(Math.max(1, sampleDurationMs(s) - L.trimStart - L.trimEnd) / 1000, r0, r1, g) * 1000;
