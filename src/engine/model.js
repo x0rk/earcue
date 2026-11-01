@@ -12,6 +12,10 @@ export const TYPE_BLURB = {
 export const uid = () => Math.random().toString(36).slice(2, 10);
 export const randSeed = () => (Math.random() * 2147483647) >>> 0;
 
+// Clean up settings for audio layers. The gate's bottom value means off; hum is 0 (off), 50 or 60 Hz.
+export const GATE_OFF_DB = -80;
+export const HUM_OPTIONS = [0, 50, 60];
+
 export function layerDefaults(type) {
   const base = {
     id: uid(),
@@ -42,7 +46,22 @@ export function layerDefaults(type) {
     Object.assign(base, { freq: 900, material: 'bar', partials: 4, damping: 0.5, brightness: 0.4, strike: -14, attack: 0.3, decay: 150 });
   }
   if (type === 'sample') {
-    Object.assign(base, { sampleId: null, sampleName: '', trimStart: 0, trimEnd: 0, pitch: 0, slideTo: 0, glide: 0, reverse: false, fadeIn: 0, fadeOut: 5, attack: 0 });
+    Object.assign(base, {
+      sampleId: null,
+      sampleName: '',
+      trimStart: 0,
+      trimEnd: 0,
+      pitch: 0,
+      slideTo: 0,
+      glide: 0,
+      reverse: false,
+      fadeIn: 0,
+      fadeOut: 5,
+      attack: 0,
+      denoise: 0,
+      gate: GATE_OFF_DB,
+      hum: 0,
+    });
   }
   return base;
 }
@@ -303,6 +322,8 @@ const LIMITS = {
     slideTo: [-24, 24],
     fadeIn: [0, 300],
     fadeOut: [0, 3000],
+    denoise: [0, 1],
+    gate: [GATE_OFF_DB, -20],
   },
   filter: { freq: [20, 20000], q: [0.1, 20], envAmt: [-6, 6], envTime: [1, 2000] },
   lfo: { rate: [0.1, 80], depth: [0, 1] },
@@ -361,7 +382,10 @@ export function normalizeLayer(l) {
   out.filter = { ...base.filter, ...pickKnown(l.filter, base.filter) };
   out.lfo = { ...base.lfo, ...pickKnown(l.lfo, base.lfo) };
   if (typeof l.id === 'string') out.id = l.id;
-  if (l.type === 'sample') out.sampleId = typeof l.sampleId === 'string' ? l.sampleId : null;
+  if (l.type === 'sample') {
+    out.sampleId = typeof l.sampleId === 'string' ? l.sampleId : null;
+    if (!HUM_OPTIONS.includes(out.hum)) out.hum = 0;
+  }
   if (out.wave && !ENUMS.wave.includes(out.wave)) out.wave = 'sine';
   if (out.color && !ENUMS.color.includes(out.color)) out.color = 'white';
   if (out.material && !ENUMS.material.includes(out.material)) out.material = 'bar';
