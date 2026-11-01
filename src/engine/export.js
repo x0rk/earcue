@@ -1,21 +1,30 @@
 import engineSource from './engine.js?raw';
-import { normalizePatch } from './model.js';
+import { cleanName, normalizePatch, oneLine } from './model.js';
 import { samples, floatToB64, b64ToFloat, storeSample } from './samples.js';
-import { APP_NAME } from '../brand.js';
+import { APP_NAME, LICENSE_NOTICE } from '../brand.js';
 
-export const slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'sound';
+// Letters and digits in any script survive, so "タップ" and "通知" don't both become "sound".
+export const slug = (s) => s.toLowerCase().replace(/[^\p{L}\p{M}\p{N}]+/gu, '-').replace(/^-|-$/g, '') || 'sound';
+
+// Escaping < keeps a module safe to paste into an HTML <script> tag, where "</script>" would end it.
+const jsLiteral = (v, space) => JSON.stringify(v, null, space).replace(/</g, '\\u003c');
+// Comments can't escape anything, so a name in one loses its angle brackets instead.
+const commentText = (s) => oneLine(s).replace(/[<>]/g, '');
 
 export function encodeWav(channels, sr, bits) {
   const nch = channels.length;
   const n = channels[0].length;
   const bps = bits / 8;
-  const buf = new ArrayBuffer(44 + n * nch * bps);
+  const dataSize = n * nch * bps;
+  // RIFF chunks are word-aligned: an odd-sized data chunk (24-bit mono, odd length) gets a pad byte.
+  const pad = dataSize % 2;
+  const buf = new ArrayBuffer(44 + dataSize + pad);
   const v = new DataView(buf);
   const w = (o, s) => {
     for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i));
   };
   w(0, 'RIFF');
-  v.setUint32(4, 36 + n * nch * bps, true);
+  v.setUint32(4, 36 + dataSize + pad, true);
   w(8, 'WAVE');
   w(12, 'fmt ');
   v.setUint32(16, 16, true);
@@ -26,7 +35,7 @@ export function encodeWav(channels, sr, bits) {
   v.setUint16(32, nch * bps, true);
   v.setUint16(34, bits, true);
   w(36, 'data');
-  v.setUint32(40, n * nch * bps, true);
+  v.setUint32(40, dataSize, true);
   let o = 44;
   for (let i = 0; i < n; i++) {
     for (let c = 0; c < nch; c++) {
@@ -115,6 +124,7 @@ export function makeZip(files) {
   return new Blob([...parts, ...central, new Uint8Array(end.buffer)], { type: 'application/zip' });
 }
 
+// Project files keep whole clips, so the trims can still change after you open them again.
 function usedSampleData(patch) {
   const data = {};
   for (const L of patch.layers) {
@@ -125,14 +135,58 @@ function usedSampleData(patch) {
   return data;
 }
 
-function sampleDataLiteral(data, abbreviate) {
-  const json = JSON.stringify(data);
-  return abbreviate && json.length > 400 ? `{} /* ${Math.round(json.length / 1024)} KB of audio data, included when you export */` : json;
+// Code exports carry only the part of each clip that plays, so audio trimmed away in the editor never
+// ships in someone's app. Each layer's trims shift to match the shorter clip, so it sounds the same.
+function packSamples(patches) {
+  const spans = new Map();
+  for (const p of patches) {
+    for (const L of p.layers) {
+      const s = L.type === 'sample' && samples.get(L.sampleId);
+      if (!s) continue;
+      const n = s.channels[0].length;
+      const a = (Math.max(0, L.trimStart) / 1000) * s.sampleRate;
+      const b = (Math.max(0, L.trimEnd) / 1000) * s.sampleRate;
+      // Trims apply to the reversed clip, so a reversed layer plays the mirrored part. One spare sample
+      // on each side covers the rounding.
+      const lo = Math.min(n - 1, Math.max(0, Math.floor(L.reverse ? b : a) - 1));
+      const hi = Math.max(lo + 1, Math.min(n, Math.ceil(n - (L.reverse ? a : b)) + 1));
+      const span = spans.get(L.sampleId);
+      spans.set(L.sampleId, span ? { s, lo: Math.min(span.lo, lo), hi: Math.max(span.hi, hi) } : { s, lo, hi });
+    }
+  }
+  const packed = patches.map((p) => ({
+    ...p,
+    layers: p.layers.map((L) => {
+      const span = L.type === 'sample' && spans.get(L.sampleId);
+      if (!span) return L;
+      const cutStart = (span.lo / span.s.sampleRate) * 1000;
+      const cutEnd = ((span.s.channels[0].length - span.hi) / span.s.sampleRate) * 1000;
+      return {
+        ...L,
+        trimStart: Math.max(0, L.trimStart - (L.reverse ? cutEnd : cutStart)),
+        trimEnd: Math.max(0, L.trimEnd - (L.reverse ? cutStart : cutEnd)),
+      };
+    }),
+  }));
+  return { patches: packed, spans };
+}
+
+function sampleDataLiteral(spans, abbreviate) {
+  // The Code tab is a preview, so it estimates the size instead of encoding the audio on every render.
+  if (abbreviate && spans.size) {
+    let bytes = 0;
+    for (const { s, lo, hi } of spans.values()) bytes += s.channels.length * Math.ceil(((hi - lo) * 2) / 3) * 4;
+    return `{} /* ${Math.max(1, Math.round(bytes / 1024))} KB of audio data, included when you export */`;
+  }
+  const data = {};
+  for (const [id, { s, lo, hi }] of spans) data[id] = { name: s.name, sampleRate: s.sampleRate, channels: s.channels.map((c) => floatToB64(c.subarray(lo, hi))) };
+  return jsLiteral(data);
 }
 
 // Shared by the single-sound and sound-set modules: the engine plus a lazy sample decoder.
 function runtimeSource() {
   return [
+    `/*! ${LICENSE_NOTICE} */`,
     engineSource.replace(/^export /gm, '').trim(),
     '',
     'let decodedSamples = null;',
@@ -175,13 +229,17 @@ const soundEntry = (patch, res) => ({
 });
 
 export function moduleSource(patch, res, { abbreviateSamples = false } = {}) {
+  const {
+    patches: [packed],
+    spans,
+  } = packSamples([patch]);
   return [
-    `// ${patch.name}. Made with ${APP_NAME}.`,
+    `// ${commentText(patch.name)}. Made with ${APP_NAME}.`,
     '// Plays the sound with the Web Audio API. No audio file needed.',
     "// Usage: import { playSound } from './this-file.js'; playSound(new AudioContext());",
     '',
-    `const SOUND = ${JSON.stringify(soundEntry(patch, res), null, 2)};`,
-    `const SAMPLE_DATA = ${sampleDataLiteral(usedSampleData(patch), abbreviateSamples)};`,
+    `const SOUND = ${jsLiteral(soundEntry(packed, res), 2)};`,
+    `const SAMPLE_DATA = ${sampleDataLiteral(spans, abbreviateSamples)};`,
     '',
     runtimeSource(),
     '',
@@ -194,22 +252,21 @@ export function moduleSource(patch, res, { abbreviateSamples = false } = {}) {
 
 // One module for a whole sound set: playSound('tap', ctx), playSound('success', ctx) and so on.
 export function setModuleSource(rendered) {
+  const { patches, spans } = packSamples(rendered.map((r) => r.patch));
   const sounds = {};
-  const data = {};
-  for (const { patch, res, base } of rendered) {
+  rendered.forEach(({ res, base }, i) => {
     let key = base;
-    for (let i = 2; sounds[key]; i += 1) key = `${base}-${i}`;
-    sounds[key] = soundEntry(patch, res);
-    Object.assign(data, usedSampleData(patch));
-  }
+    for (let n = 2; sounds[key]; n += 1) key = `${base}-${n}`;
+    sounds[key] = soundEntry(patches[i], res);
+  });
   const names = Object.keys(sounds);
   return [
     `// A sound set of ${names.length}. Made with ${APP_NAME}.`,
     '// Plays every sound with the Web Audio API. No audio files needed.',
     `// Usage: import { playSound } from './sounds.js'; playSound('${names[0] || 'name'}', new AudioContext());`,
     '',
-    `const SOUNDS = ${JSON.stringify(sounds, null, 2)};`,
-    `const SAMPLE_DATA = ${sampleDataLiteral(data, false)};`,
+    `const SOUNDS = ${jsLiteral(sounds, 2)};`,
+    `const SAMPLE_DATA = ${sampleDataLiteral(spans, false)};`,
     '',
     runtimeSource(),
     '',
@@ -226,7 +283,7 @@ export function setModuleSource(rendered) {
 
 export function setReadme(rendered, info, what) {
   const lines = [`A sound set of ${rendered.length}. Made with ${APP_NAME} on ${new Date().toISOString().slice(0, 10)}.`, ''];
-  if (what !== 'code') lines.push(`wav/        One ${info.channels === 1 ? 'mono' : 'stereo'} ${info.sampleRate} Hz, ${info.bits}-bit WAV per sound.`);
+  if (what === 'wav' || what === 'all') lines.push(`wav/        One ${info.channels === 1 ? 'mono' : 'stereo'} ${info.sampleRate} Hz, ${info.bits}-bit WAV per sound.`);
   if (what === 'code' || what === 'all') lines.push("sounds.js   Plays any sound by name with the Web Audio API: playSound('name', audioContext).");
   if (what === 'all' || what === 'project') lines.push(`projects/   The editable projects. Open them again in ${APP_NAME}.`);
   lines.push('', 'Sounds:');
@@ -239,6 +296,9 @@ export function patchJson(patch) {
   return JSON.stringify({ format: 'earcue-project/1', app: APP_NAME, patch, samples: usedSampleData(patch) }, null, 2);
 }
 
+const MIN_SAMPLE_RATE = 8000;
+const MAX_SAMPLE_RATE = 192000;
+
 // Accepts a project file exported from this app and restores any embedded audio.
 export function readPatchFile(text) {
   const obj = JSON.parse(text);
@@ -247,21 +307,23 @@ export function readPatchFile(text) {
   if (obj.samples && typeof obj.samples === 'object') {
     for (const id of Object.keys(obj.samples)) {
       const s = obj.samples[id];
-      if (!s || !Array.isArray(s.channels)) continue;
-      storeSample({ id, name: s.name || 'Audio', sampleRate: s.sampleRate || 48000, channels: s.channels.map(b64ToFloat) });
+      if (!s || !Array.isArray(s.channels) || !s.channels.length || !s.channels.every((c) => typeof c === 'string')) continue;
+      const rate = Number.isFinite(s.sampleRate) ? Math.min(MAX_SAMPLE_RATE, Math.max(MIN_SAMPLE_RATE, s.sampleRate)) : 48000;
+      storeSample({ id, name: (typeof s.name === 'string' && cleanName(s.name, 120)) || 'Audio', sampleRate: rate, channels: s.channels.slice(0, 2).map(b64ToFloat) });
     }
   }
   return patch;
 }
 
 export function readme(patch, base, info) {
+  const col = (file) => file.padEnd(base.length + 8);
   return [
     patch.name,
     `Made with ${APP_NAME} on ${new Date().toISOString().slice(0, 10)}.`,
     '',
-    `${base}.wav          ${info.channels === 1 ? 'Mono' : 'Stereo'}, ${info.sampleRate} Hz, ${info.bits}-bit. ${info.ms} ms, peak ${patch.master.out} dBFS.`,
-    `${base}.js           Plays the same sound with the Web Audio API, with no audio file.`,
-    `${base}.patch.json   The editable project. Open it again with Import in ${APP_NAME}.`,
+    `${col(`${base}.wav`)}${info.channels === 1 ? 'Mono' : 'Stereo'}, ${info.sampleRate} Hz, ${info.bits}-bit. ${info.ms} ms, peak ${patch.master.out} dBFS.`,
+    `${col(`${base}.js`)}Plays the same sound with the Web Audio API, with no audio file.`,
+    `${col(`${base}.json`)}The editable project. Open it again with Open project in ${APP_NAME}.`,
     '',
     'Need a smaller file? Convert the WAV:',
     `  ffmpeg -i ${base}.wav -c:a libopus -b:a 64k ${base}.ogg`,

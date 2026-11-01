@@ -160,13 +160,93 @@ export const ENUMS = {
   lfo: ['off', 'pitch', 'filter', 'amp'],
 };
 
+// Names are written into comments in exported code, so anything that could start a new line goes.
+const LINE_BREAKING = /[\u0000-\u001f\u007f-\u009f\u2028\u2029]/g;
+export const oneLine = (s) => s.replace(LINE_BREAKING, ' ');
+export const cleanName = (s, max) => oneLine(s).trim().slice(0, max);
+
+const MAX_LAYERS = 64;
+const MAX_START_MS = 6000; // the longest sound the app renders
+const MAX_CLIP_MS = 600000;
+
+// The widest value each number can take anywhere in the app. Saved and imported data is clamped
+// to these, so a crafted project can't ask for half a million voices. Sliders may cover less.
+const LIMITS = {
+  layer: {
+    start: [0, MAX_START_MS],
+    level: [-48, 6],
+    pan: [-1, 1],
+    attack: [0, 300],
+    hold: [0, 500],
+    decay: [2, 3000],
+    drive: [0, 1],
+    reverbSend: [0, 1],
+    delaySend: [0, 1],
+    seed: [0, 0xffffffff, true],
+    pitchStart: [20, 12000],
+    pitchEnd: [20, 12000],
+    glide: [0, 400],
+    voices: [1, 5, true],
+    detune: [0, 50],
+    fmRatio: [0.25, 12],
+    fmIndex: [0, 8],
+    fmDecay: [2, 2000],
+    freq: [40, 8000],
+    partials: [1, 5, true],
+    damping: [0, 1],
+    brightness: [0, 1],
+    strike: [-60, 0],
+    trimStart: [0, MAX_CLIP_MS],
+    trimEnd: [0, MAX_CLIP_MS],
+    pitch: [-24, 24],
+    fadeIn: [0, 200],
+    fadeOut: [0, 500],
+  },
+  filter: { freq: [20, 20000], q: [0.1, 20], envAmt: [-6, 6], envTime: [1, 2000] },
+  lfo: { rate: [0.1, 80], depth: [0, 1] },
+  master: {
+    hpf: [20, 2000],
+    lpf: [500, 20000],
+    low: [-18, 12],
+    presence: [-18, 12],
+    presenceFreq: [600, 10000],
+    air: [-18, 12],
+    compThreshold: [-60, 0],
+    compRatio: [1, 20],
+    compAttack: [0.1, 100],
+    compRelease: [10, 1000],
+    compMakeup: [0, 24],
+    drive: [0, 1],
+    reverbMix: [0, 1],
+    reverbSize: [0.05, 3],
+    reverbDamping: [0, 1],
+    reverbPredelay: [0, 100],
+    delayMix: [0, 1],
+    delayTime: [5, 1000],
+    delayFeedback: [0, 0.9],
+    delayTone: [500, 20000],
+    out: [-40, -1],
+    fade: [0, 100],
+    variation: [0, 100],
+  },
+};
+
+function clampTo(values, limits) {
+  for (const [k, [min, max, whole]] of Object.entries(limits)) {
+    if (typeof values[k] !== 'number') continue;
+    const v = Math.min(max, Math.max(min, values[k]));
+    values[k] = whole ? Math.round(v) : v;
+  }
+  return values;
+}
+
 function pickKnown(src, base) {
   const out = {};
   if (!src || typeof src !== 'object') return out;
   for (const k of Object.keys(base)) {
     const v = src[k];
     if (typeof base[k] === 'number' && typeof v === 'number' && Number.isFinite(v)) out[k] = v;
-    else if (typeof base[k] === 'string' && typeof v === 'string') out[k] = v.slice(0, 120);
+    else if (typeof base[k] === 'string' && typeof v === 'string') out[k] = cleanName(v, 120);
     else if (typeof base[k] === 'boolean' && typeof v === 'boolean') out[k] = v;
   }
   return out;
@@ -185,26 +265,34 @@ export function normalizeLayer(l) {
   if (out.material && !ENUMS.material.includes(out.material)) out.material = 'bar';
   if (!ENUMS.ftype.includes(out.filter.type)) out.filter.type = 'none';
   if (!ENUMS.lfo.includes(out.lfo.target)) out.lfo.target = 'off';
+  clampTo(out, LIMITS.layer);
+  clampTo(out.filter, LIMITS.filter);
+  clampTo(out.lfo, LIMITS.lfo);
   return out;
 }
+
+export const MAX_NAME = 60;
 
 export function normalizePatch(p) {
   if (!p || typeof p !== 'object' || !Array.isArray(p.layers)) return null;
   return {
     id: typeof p.id === 'string' ? p.id : uid(),
-    name: typeof p.name === 'string' && p.name.trim() ? p.name.slice(0, 60) : 'Untitled',
-    description: typeof p.description === 'string' ? p.description.slice(0, 160) : '',
+    name: (typeof p.name === 'string' && cleanName(p.name, MAX_NAME)) || 'Untitled',
+    description: typeof p.description === 'string' ? cleanName(p.description, 160) : '',
     seed: typeof p.seed === 'number' ? p.seed >>> 0 : randSeed(),
-    layers: p.layers.map(normalizeLayer).filter(Boolean),
-    master: { ...masterDefaults(), ...pickKnown(p.master, masterDefaults()) },
+    layers: p.layers.slice(0, MAX_LAYERS).map(normalizeLayer).filter(Boolean),
+    master: clampTo({ ...masterDefaults(), ...pickKnown(p.master, masterDefaults()) }, LIMITS.master),
   };
 }
 
-export function uniqueName(base, names) {
-  if (!names.includes(base)) return base;
-  let i = 2;
-  while (names.includes(`${base} ${i}`)) i += 1;
-  return `${base} ${i}`;
+// Adds " 2", " 3" and so on, shortening the base so the result still fits in max characters.
+export function uniqueName(base, names, max = MAX_NAME) {
+  if (!names.includes(base)) return base.slice(0, max);
+  for (let i = 2; ; i += 1) {
+    const suffix = ` ${i}`;
+    const name = `${base.slice(0, max - suffix.length)}${suffix}`;
+    if (!names.includes(name)) return name;
+  }
 }
 
 export function cloneLayerFresh(L) {

@@ -2,6 +2,7 @@ import { dbToGain, buildLayer, scheduleSound } from './engine.js';
 import { samples, sampleDurationMs } from './samples.js';
 
 const MAX_RENDER_S = 6;
+export const MAX_RENDER_MS = MAX_RENDER_S * 1000;
 const TAIL_THRESHOLD = 0.001; // -60 dB below peak: where the file is trimmed
 const AUDIBLE_THRESHOLD = 0.01; // -40 dB below peak: what counts as audible
 
@@ -147,7 +148,12 @@ function measure(res) {
 function finalize(chs, sr, M) {
   const n0 = chs[0].length;
   let peak = 0;
-  for (const d of chs) for (let i = 0; i < n0; i++) peak = Math.max(peak, Math.abs(d[i]));
+  // Comparisons skip NaN, and the finite check skips Infinity, so one bad sample can't silence the sound.
+  for (const d of chs)
+    for (let i = 0; i < n0; i++) {
+      const a = Math.abs(d[i]);
+      if (a > peak && a !== Infinity) peak = a;
+    }
   if (peak < 1e-7) return emptyResult(sr);
   const thr = peak * TAIL_THRESHOLD;
   let end = n0 - 1;
@@ -156,7 +162,7 @@ function finalize(chs, sr, M) {
   const gain = dbToGain(M.out) / peak;
   const channels = chs.map((d) => {
     const o = new Float32Array(n);
-    for (let i = 0; i < n; i++) o[i] = d[i] * gain;
+    for (let i = 0; i < n; i++) o[i] = Number.isFinite(d[i]) ? d[i] * gain : 0;
     return o;
   });
   const fadeN = Math.min(n, Math.round((sr * M.fade) / 1000));

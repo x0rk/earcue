@@ -1,7 +1,7 @@
 import { dbToGain } from './engine/engine.js';
 import { encodeWav, makeZip, moduleSource, patchJson, readme, readPatchFile, setModuleSource, setReadme, slug } from './engine/export.js';
-import { renderPatch } from './engine/render.js';
-import { decodeToSample, loadSamples, storeSample } from './engine/samples.js';
+import { MAX_RENDER_MS, renderPatch } from './engine/render.js';
+import { decodeToSample, loadSamples, pruneSamples, sampleDurationMs, storeSample } from './engine/samples.js';
 import { addSampleLayer, addSound, bumpSamples, currentSound, setPref, showToast, useStore } from './store.js';
 
 const AUDIO_EXT = /\.(wav|mp3|ogg|oga|m4a|aac|aif|aiff|flac|webm|opus)$/i;
@@ -22,7 +22,11 @@ export async function importAudioFiles(files) {
       const s = await decodeToSample(await f.arrayBuffer(), f.name);
       storeSample(s);
       addSampleLayer(s);
-      showToast(`Added ${f.name} as a layer.`);
+      showToast(
+        sampleDurationMs(s) > MAX_RENDER_MS
+          ? `Added ${f.name}. Only the first ${MAX_RENDER_MS / 1000} seconds of a sound play, so trim it to the part you need.`
+          : `Added ${f.name} as a layer.`,
+      );
     } catch {
       showToast(`Couldn't read ${f.name}. Try a WAV, MP3, OGG or M4A file.`);
     }
@@ -65,12 +69,13 @@ export function handleDroppedFiles(files) {
   if (!audio.length && !projects.length) showToast('Drop an audio file or an exported project (.json).');
 }
 
-// Loads audio for sample layers and references saved in earlier visits.
+// Loads audio for sample layers and references saved in earlier visits, and deletes the rest.
 export async function loadStoredSamples() {
   const s = useStore.getState();
   const ids = new Set();
   for (const p of s.ws.sounds) for (const L of p.layers) if (L.type === 'sample' && L.sampleId) ids.add(L.sampleId);
   for (const r of s.refs) ids.add(r.sampleId);
+  await pruneSamples(ids);
   if (await loadSamples([...ids])) bumpSamples();
 }
 
@@ -105,11 +110,15 @@ export async function exportSound({ what, scope, name, channels, sampleRate, bit
     const sounds = useStore.getState().ws.sounds;
     const files = [];
     const rendered = [];
+    const used = new Set();
     for (const p of sounds) {
       const { res, chs } = await renderForExport(p, info);
-      const base = slug(p.name);
+      // Two sounds can share a name, so file names get "-2", "-3" instead of overwriting each other.
+      let base = slug(p.name);
+      for (let i = 2; used.has(base); i += 1) base = `${slug(p.name)}-${i}`;
+      used.add(base);
       rendered.push({ patch: p, res, base });
-      if (what !== 'code') files.push({ name: `wav/${base}.wav`, data: encodeWav(chs, sampleRate, bits) });
+      if (what === 'wav' || what === 'all') files.push({ name: `wav/${base}.wav`, data: encodeWav(chs, sampleRate, bits) });
       if (what === 'all' || what === 'project') files.push({ name: `projects/${base}.json`, data: enc.encode(patchJson(p)) });
     }
     if (what === 'code' || what === 'all') files.push({ name: 'sounds.js', data: enc.encode(setModuleSource(rendered)) });

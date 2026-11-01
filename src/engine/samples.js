@@ -68,10 +68,38 @@ export async function loadSamples(ids) {
 
 export async function decodeToSample(arrayBuffer, name, id) {
   const oc = new OfflineAudioContext(1, 1, PREVIEW_SR);
-  const buf = await new Promise((res, rej) => oc.decodeAudioData(arrayBuffer, res, rej));
+  const buf = await oc.decodeAudioData(arrayBuffer);
   const channels = [];
-  for (let c = 0; c < Math.min(2, buf.numberOfChannels); c++) channels.push(new Float32Array(buf.getChannelData(c)));
+  for (let c = 0; c < Math.min(2, buf.numberOfChannels); c++) {
+    const d = new Float32Array(buf.getChannelData(c));
+    // Float files can carry NaN or Infinity, which would poison every render that uses them.
+    for (let i = 0; i < d.length; i++) if (!Number.isFinite(d[i])) d[i] = 0;
+    channels.push(d);
+  }
   return { id: id || `s-${Math.random().toString(36).slice(2, 10)}`, name, sampleRate: buf.sampleRate, channels };
+}
+
+// Deletes stored audio that no sound or comparison uses any more. It runs at startup, when the undo
+// history is empty, so nothing an undo could bring back is lost.
+export async function pruneSamples(keep) {
+  try {
+    const db = await openDb();
+    const keys = await new Promise((res, rej) => {
+      const rq = db.transaction(STORE).objectStore(STORE).getAllKeys();
+      rq.onsuccess = () => res(rq.result);
+      rq.onerror = () => rej(rq.error);
+    });
+    const unused = keys.filter((k) => !keep.has(k));
+    if (!unused.length) return;
+    await new Promise((res, rej) => {
+      const tx = db.transaction(STORE, 'readwrite');
+      for (const k of unused) tx.objectStore(STORE).delete(k);
+      tx.oncomplete = res;
+      tx.onerror = () => rej(tx.error);
+    });
+  } catch {
+    // Storage can be unavailable (private mode); then there is nothing to clean up.
+  }
 }
 
 // Where the sound actually starts, so recordings and files skip their leading silence.
