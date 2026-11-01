@@ -252,7 +252,7 @@ function draw(canvas, wrap, playheadMs) {
     g.font = `600 11.5px ${font}`;
     label(fit(L.name, HEADER_W - 40), 28, ln.y + 18, audible ? c.ink : c.muted);
     const state = !L.on ? 'Muted' : L.solo ? 'Solo' : anySolo ? 'Not soloed' : TYPE_LABEL[L.type];
-    label(state, 28, ln.y + 36, L.solo ? c.hot : c.muted, 400);
+    label(state, 28, ln.y + 36, L.solo ? c.ink : c.muted, L.solo ? 600 : 400);
   }
   g.fillStyle = c.line;
   g.fillRect(HEADER_W - 1, LANE.ruler, 1, H - LANE.ruler);
@@ -528,7 +528,7 @@ export function TimelineBar() {
         : 'Drag the block to move it. Drag the dots: the first sets how fast it starts and how loud, the second how long it lasts.'
       : 'Click a layer to edit it, or keep Output selected to shape the whole sound.';
   return (
-    <div className="flex h-10 shrink-0 items-center gap-2 border-b border-line bg-panel px-2.5">
+    <div className="flex min-h-10 shrink-0 flex-wrap items-center gap-x-2 gap-y-1 border-b border-line bg-panel px-2.5 py-1">
       <IconButton label="Zoom out" shortcut="-" size="iconSm" onClick={() => zoomBy(1 / 1.5)}>
         <Minus />
       </IconButton>
@@ -540,9 +540,8 @@ export function TimelineBar() {
         <Plus />
       </IconButton>
       <Select size="sm" label="Snap to grid" className="w-[118px] shrink-0" value={String(snap)} onChange={(v) => setPref({ snap: Number(v) })} groups={[{ items: SNAP_OPTIONS }]} />
-      <p className="ml-2 min-w-0 text-[12px] leading-tight text-muted line-clamp-2 max-lg:hidden" title={tip}>
-        {tip}
-      </p>
+      {/* Beside the controls when there is room, on its own row when there isn't, never cut off. */}
+      <p className="min-w-0 flex-1 basis-[280px] px-1 text-[12px] leading-snug text-muted">{tip}</p>
     </div>
   );
 }

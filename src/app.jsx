@@ -46,6 +46,8 @@ const ownsKeys = (el) => !!el?.closest?.(KEY_WIDGETS);
 function useShortcuts() {
   useEffect(() => {
     const onKey = (e) => {
+      // Radix marks keys it used, like the Escape that closed a dialog or menu, as handled.
+      if (e.defaultPrevented) return;
       const s = useStore.getState();
       if (s.dialog) return;
       const typing = isTyping(e.target);

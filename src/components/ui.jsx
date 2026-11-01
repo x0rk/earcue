@@ -12,7 +12,7 @@ const cx = (...c) => c.filter(Boolean).join(' ');
 // text as the control's description instead of a live region that talks on every focus change.
 function HintText({ id, text }) {
   return text ? (
-    <span id={id} className="sr-only">
+    <span id={id} hidden>
       {text}
     </span>
   ) : null;
@@ -121,7 +121,7 @@ export function Scrub({ label, value, onChange, onCommit, min, max, step = 1, lo
   return (
     <div
       className={cx(
-        'group relative h-8 rounded-[7px] bg-field transition-colors hover:bg-field-hover has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-1 has-[:focus-visible]:outline-accent',
+        'group relative h-8 rounded-[7px] bg-field transition-colors hover:bg-field-hover has-[[role=slider]:focus-visible]:outline-2 has-[[role=slider]:focus-visible]:outline-offset-1 has-[[role=slider]:focus-visible]:outline-accent',
         disabled && 'pointer-events-none opacity-45',
       )}
       {...hintProps(label, hint)}

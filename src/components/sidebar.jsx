@@ -18,7 +18,8 @@ export function focusSelectedRow() {
 }
 
 // A mouse click shouldn't leave focus on the row, or Space would press the row again instead of playing.
-const releaseMouseFocus = (e) => e.detail > 0 && e.currentTarget.blur();
+// Screen readers' simulated clicks have no pointer type, so they keep focus where it is.
+const releaseMouseFocus = (e) => e.detail > 0 && e.nativeEvent.pointerType !== '' && e.currentTarget.blur();
 
 function PaneHead({ title, children }) {
   return (
@@ -65,7 +66,8 @@ function SoundRow({ sound, active, isCompare, canDelete }) {
           </Button>
         }
         items={[
-          { label: 'Rename', icon: <Pencil />, keepFocus: true, onSelect: () => setRenaming(true) },
+          // The field mounts after the menu has closed, or the menu's focus trap would pull focus back.
+          { label: 'Rename', icon: <Pencil />, keepFocus: true, onSelect: () => requestAnimationFrame(() => setRenaming(true)) },
           { label: 'Duplicate', icon: <Copy />, onSelect: () => duplicateSound(sound.id) },
           { label: 'Compare with this', icon: <GitCompareArrows />, disabled: active, onSelect: () => setCompare({ kind: 'sound', id: sound.id }) },
           'sep',
