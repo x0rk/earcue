@@ -29,6 +29,9 @@
   --c-modal: #b8740a;
   --c-sample: #c03a8f;
   --scrim: rgb(14 16 20 / 0.42);
+  /* Scrollbar thumbs meet 3:1 on every surface they cross (WCAG non-text contrast), and stay thin. */
+  --scroll-thumb: #868b94;
+  --scroll-thumb-hover: var(--faint);
   --shadow: 0 1px 2px rgb(16 20 30 / 0.06), 0 8px 24px rgb(16 20 30 / 0.08);
   /* The preview's UI kit uses the shadcn/ui neutral theme (MIT), kept apart from the app's own tokens. */
   --kit-bg: oklch(1 0 0);
@@ -67,6 +70,8 @@
     --ink: #eeeeee;
     --muted: #a1a1a1;
     --faint: #8c8c8c;
+    --scroll-thumb: #6b6b6b;
+    --scroll-thumb-hover: var(--faint);
     --line: #282828;
     --line-strong: #383838;
     --accent: #7d9cff;
@@ -116,6 +121,8 @@
   --ink: #eeeeee;
   --muted: #a1a1a1;
   --faint: #8c8c8c;
+  --scroll-thumb: #6b6b6b;
+  --scroll-thumb-hover: var(--faint);
   --line: #282828;
   --line-strong: #383838;
   --accent: #7d9cff;
@@ -251,6 +258,59 @@ svg {
 }
 .tabular {
   font-variant-numeric: tabular-nums;
+}
+/* Scrollbars look the same on every platform: a thin rounded thumb with no track and no arrows, which
+   grows a little under the pointer. Chrome, Edge and Safari draw them from the ::-webkit-scrollbar rules,
+   whatever the OS; Firefox, which has no such rules, gets its thin scrollbar in the same colors.
+   Windows High Contrast keeps a thumb in its own system colors, and More contrast makes it darker. */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+  background: transparent;
+}
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  min-width: 32px;
+  min-height: 32px;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-color: var(--scroll-thumb);
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  border-width: 1px;
+  background-color: var(--scroll-thumb-hover);
+}
+::-webkit-scrollbar-thumb:active {
+  background-color: var(--muted);
+}
+::-webkit-scrollbar-button {
+  display: none;
+}
+@supports not selector(::-webkit-scrollbar) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scroll-thumb) transparent;
+  }
+}
+@media (prefers-contrast: more) {
+  /* As specific as the theme rules, and later, so it wins in both themes. */
+  :root,
+  :root[data-theme],
+  :root:not([data-theme='light']) {
+    --scroll-thumb: var(--muted);
+    --scroll-thumb-hover: var(--ink);
+  }
+}
+@media (forced-colors: active) {
+  ::-webkit-scrollbar-thumb,
+  ::-webkit-scrollbar-thumb:hover,
+  ::-webkit-scrollbar-thumb:active {
+    background-color: CanvasText;
+  }
 }
 @keyframes pulse-soft {
   50% {
