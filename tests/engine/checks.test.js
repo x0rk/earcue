@@ -118,6 +118,30 @@ describe('checkSet', () => {
     expect(issues({}, { sounds: [tap, sound('Send', tone(1000), tone(1100)), error] })).toEqual(['Send: key']);
   });
 
+  it('checks every take of an interaction, since any of them can play', () => {
+    const tap2 = sound('Tap 2');
+    expect(issues({ 'Tap 2': { audibleMs: 140 } }, { sounds: [tap, tap2, send, error] })).toEqual(['Tap 2: long']);
+    expect(issues({ 'Tap 2': { rmsDb: LOUD.rmsDb } }, { sounds: [tap, tap2, send, error] })).toEqual(['Tap 2: loud']);
+    // The second take of Toggle on sits a half step from Toggle off, so it rubs played either way round.
+    const on = sound('Toggle on', tone(D6));
+    const on2 = sound('Toggle on 2', tone(hzOf(N.E6 - 1)));
+    const off = sound('Toggle off', tone(D6));
+    expect(issues({}, { sounds: [on, on2, off, error] })).toEqual(['Toggle off: clash', 'Toggle on 2: clash']);
+  });
+
+  it('gives a celebration and one cycle of a loop more time than their tier', () => {
+    const ring = sound('Ring');
+    const celebrate = sound('Celebrate');
+    const sounds = [tap, ring, celebrate, error];
+    expect(issues({ Ring: { ...LOUD, audibleMs: 1900 }, Celebrate: { ...LOUD, audibleMs: 1100 } }, { sounds })).toEqual([]);
+    const long = checkSet({ sounds, key: null, roles: {} }, new Map(sounds.map((x) => [x.id, x === tap ? QUIET : { ...LOUD, audibleMs: 2100 }])));
+    expect(long.map((i) => i.text)).toEqual([
+      'Lasts 2100 ms. As one cycle of the Ring loop, keep it under 2000 ms.',
+      'Lasts 2100 ms. As the Celebrate sound, keep it under 1200 ms.',
+      'Lasts 2100 ms. As the Error sound, keep it under 500 ms.',
+    ]);
+  });
+
   it('passes the starter set, rendered for real', async () => {
     const sounds = starterSounds();
     const measures = new Map();

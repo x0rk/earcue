@@ -19,8 +19,9 @@ Vite, React, Radix primitives (`radix-ui`), Tailwind CSS v4, zustand with immer,
 ## Layout
 
 - `src/engine/engine.js` builds the Web Audio graph for a sound. It is embedded verbatim in the exported JavaScript module, so it must stay self-contained: no imports, and only its own declarations and `Math`.
-- `src/engine/model.js` holds layer and output defaults, the starter sounds and templates, opposites, and validation for saved or imported data.
-- `src/engine/roles.js` lists the interactions a set covers (tap, send, error and so on), each in a tier (frequent, confirm or alert), and finds each one's sound: the one the set picked, else the one with a matching name.
+- `src/engine/model.js` holds layer and output defaults, the starter sounds (one for every interaction but hover, with takes of tap and typing) and templates, variants, opposites, and validation for saved or imported data.
+- `src/engine/roles.js` lists the interactions a set covers (the 29 most product sound kits name), each in a preview group and a tier (frequent, confirm or alert). A rare or looping role can carry `maxMs`, and `loop: true` repeats it until stopped. `soundsForRole` finds an interaction's sounds: the ones the set picked (a list, up to `MAX_VARIANTS`; older sets saved one id), else the first of its names a sound has, together with that name's numbered takes ("Tap 2"). Playback picks one at random, never the last one.
+- `src/engine/kits.js` reads `public/kits/index.json`, the manifest of the bundled kits, and turns a kit's decoded recordings into a set's sounds and roles. `src/kits.js` fetches, decodes and opens kits. The audio in `public/kits` keeps its own licences (see the README); keep each kit's licence file next to its audio and its credit in the manifest. A set made from a kit carries the credit in `set.credits`, and exports print it.
 - `src/engine/palette.js` holds what a set's sounds share: the key (scales, the wider scale around a pentatonic key, retuning), loudness by tier, and the room settings. Retuning moves each note to the same step of the new scale and keeps whatever sits off the scale, so a deliberate clash (`patch.tension`) stays one. Applying the palette rewrites the sounds, so exports never depend on the set.
 - `src/engine/pitch.js` finds the pitch of a recording (McLeod's normalized square difference), so recordings can be checked, retuned and grown into a family. `samplePitch(id)` caches the answer per sample.
 - `src/engine/family.js` grows a set from one sound: each interaction plays the source one or more times, moved in time and pitch within a major pentatonic scale on the source's note.
@@ -47,7 +48,8 @@ Vite, React, Radix primitives (`radix-ui`), Tailwind CSS v4, zustand with immer,
 - The app should feel native, not like a web page. Interface text isn't selectable and the pointer stays an arrow; mark text people may copy, like the code view, with `data-selectable`. Cmd+A selects only inside a field or a `data-selectable` region, and Cmd+S saves.
 - Change sound data through `edit`, `editLayer`, `editSound` or `editMaster` in `store.js`. During a drag, pass `false` to skip the history entry, then call `commit()` when the drag ends, so one gesture is one undo step.
 - If you change the engine, check that an exported module still plays at the sound's target peak. The exported code and the app must sound the same.
-- Keep the product standalone: no references to other companies or internal projects in code, copy or commits.
+- Keep the product standalone: no references to other companies or internal projects in code, copy or commits. The one exception is the credit a bundled kit's licence requires.
+- Never rewrite a saved set just because it loaded. Read old formats in `normalizeSet` and friends, and write the new format only when the person edits the set.
 
 ## Git workflow
 

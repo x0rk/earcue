@@ -1,0 +1,18 @@
+Material Design product sounds
+by Google
+
+Licensed under the Creative Commons Attribution 4.0 International License
+(CC BY 4.0): https://creativecommons.org/licenses/by/4.0/
+
+Google published these 40 sounds on the Material Design "Sound resources" page,
+"Available under CC-BY 4.0":
+https://web.archive.org/web/20190717142129/https://material.io/design/sound/sound-resources.html
+
+Google's own download link no longer works, so these OGG files come from the
+copy of the original zip kept at
+https://archive.org/details/material-design-sound-resources
+(folder material_product_sounds/ogg). Each file matches the MD5 checksum listed
+for it there. They are unchanged.
+
+When you share a sound made from these, credit "Material Design product sounds
+by Google, CC BY 4.0" and say that you changed it.

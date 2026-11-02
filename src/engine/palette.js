@@ -1,6 +1,6 @@
 import { NOTE_NAMES } from '../lib/format.js';
 import { LOUDNESS, LOUDNESS_RANGE } from './model.js';
-import { ROLES, soundForRole } from './roles.js';
+import { ROLES, soundsForRole } from './roles.js';
 
 // A set's palette: the key its notes stay in or near, how loud each tier of interaction is, and the
 // room its sounds share. Applying it rewrites the sounds themselves, so an exported sound never
@@ -142,7 +142,7 @@ export function normalizeLoudness(raw) {
 // The tier a sound plays in: the loudest among the interactions it plays for, or null for none.
 export function tierOf(set, soundId) {
   let tier = null;
-  for (const r of ROLES) if (soundForRole(set, r.id)?.id === soundId && (!tier || TIER_RANK[r.tier] > TIER_RANK[tier])) tier = r.tier;
+  for (const r of ROLES) if (soundsForRole(set, r.id).some((s) => s.id === soundId) && (!tier || TIER_RANK[r.tier] > TIER_RANK[tier])) tier = r.tier;
   return tier;
 }
 

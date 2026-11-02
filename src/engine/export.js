@@ -275,22 +275,68 @@ export function moduleSource(patch, res, { abbreviateSamples = false } = {}) {
   ].join('\n');
 }
 
+// The part of a set module that plays by interaction: one of its sounds at random, never the same one
+// twice in a row, and loops for interactions such as a ring.
+const ROLE_RUNTIME = [
+  'export const roleNames = Object.keys(ROLES);',
+  'const lastPlayed = new Map();',
+  '',
+  '// Plays one of the sounds for an interaction and returns how long it lasts, in seconds.',
+  'export function playRole(role, ctx, destination = ctx.destination, when = ctx.currentTime) {',
+  '  const names = Object.prototype.hasOwnProperty.call(ROLES, role) ? ROLES[role] : null;',
+  "  if (!names) throw new Error(`Unknown interaction \"${role}\". Available: ${roleNames.join(', ')}`);",
+  '  const fresh = names.length > 1 ? names.filter((n) => n !== lastPlayed.get(role)) : names;',
+  '  const name = fresh[Math.floor(Math.random() * fresh.length)];',
+  '  lastPlayed.set(role, name);',
+  '  playSound(name, ctx, destination, when);',
+  '  return SOUNDS[name].length;',
+  '}',
+  '',
+  '// Plays an interaction again and again, as a phone rings, until the returned function is called.',
+  'export function loopRole(role, ctx, { gap = 0.8, destination = ctx.destination } = {}) {',
+  '  let timer = 0;',
+  '  let stopped = false;',
+  '  const cycle = () => {',
+  '    if (stopped) return;',
+  '    timer = setTimeout(cycle, (playRole(role, ctx, destination) + gap) * 1000);',
+  '  };',
+  '  cycle();',
+  '  return () => {',
+  '    stopped = true;',
+  '    clearTimeout(timer);',
+  '  };',
+  '}',
+  '',
+];
+
 // One module for a whole sound set: playSound('tap', ctx), playSound('success', ctx) and so on.
-export function setModuleSource(rendered) {
+// roles maps an interaction to the ids of the sounds that play for it; with it, the module also has
+// playRole('tap', ctx), which picks between a sound's variants, and loopRole('ring', ctx).
+export function setModuleSource(rendered, { roles = {} } = {}) {
   const { patches, spans } = packSamples(rendered.map((r) => r.patch));
   const sounds = {};
-  rendered.forEach(({ res, base }, i) => {
+  const keyOf = new Map();
+  rendered.forEach(({ res, base, patch }, i) => {
     let key = base;
     for (let n = 2; Object.hasOwn(sounds, key); n += 1) key = `${base}-${n}`;
     sounds[key] = soundEntry(patches[i], res);
+    keyOf.set(patch.id, key);
   });
   const names = Object.keys(sounds);
+  const roleKeys = Object.fromEntries(
+    Object.entries(roles)
+      .map(([role, ids]) => [role, ids.map((id) => keyOf.get(id)).filter(Boolean)])
+      .filter(([, keys]) => keys.length),
+  );
+  const hasRoles = Object.keys(roleKeys).length > 0;
   return [
     `// A sound set of ${names.length}. Made with ${APP_NAME}.`,
     '// Plays every sound with the Web Audio API. No audio files needed.',
     `// Usage: import { playSound } from './sounds.js'; playSound('${names[0] || 'name'}', new AudioContext());`,
+    ...(hasRoles ? [`// Or by interaction: playRole('${Object.keys(roleKeys)[0]}', audioContext) plays one of its variants at random.`] : []),
     '',
     `const SOUNDS = ${jsLiteral(sounds, 2)};`,
+    ...(hasRoles ? [`const ROLES = ${jsLiteral(roleKeys, 2)};`] : []),
     `const SAMPLE_DATA = ${sampleDataLiteral(spans, false)};`,
     '',
     runtimeSource(),
@@ -303,19 +349,34 @@ export function setModuleSource(rendered) {
     '  play(sound, ctx, destination, when);',
     '}',
     '',
+    ...(hasRoles ? ROLE_RUNTIME : []),
   ].join('\n');
 }
 
 const audioKind = (info) => (info.format === 'ogg' ? 'Ogg Vorbis file' : `${info.bits}-bit WAV`);
 
-export function setReadme(rendered, info, what) {
+// Where the recordings in a set came from, as their licences ask exports to say.
+function creditLines(credits) {
+  if (!credits?.length) return [];
+  return ['', 'Credits:', ...credits.map((c) => `  ${c}`), `  Trimmed and processed in ${APP_NAME}, so these sounds are changed from the originals.`];
+}
+
+// roles maps an interaction to its sounds, loops lists the interactions that repeat until stopped,
+// and credits lists where the set's recordings came from.
+export function setReadme(rendered, info, what, { roles = {}, loops = [], credits = [] } = {}) {
   const lines = [`A sound set of ${rendered.length}. Made with ${APP_NAME} on ${new Date().toISOString().slice(0, 10)}.`, ''];
   if (what === 'audio' || what === 'all') lines.push(`${info.format}/        One ${info.channels === 1 ? 'mono' : 'stereo'} ${info.sampleRate} Hz ${audioKind(info)} per sound.`);
   if (what === 'code' || what === 'all') lines.push("sounds.js   Plays any sound by name with the Web Audio API: playSound('name', audioContext).");
   if (what === 'all' || what === 'project') lines.push(`projects/   The editable projects. Open them again in ${APP_NAME}.`);
   lines.push('', 'Sounds:');
   for (const { patch, res, base } of rendered) lines.push(`  ${base.padEnd(24)} ${Math.round(res.duration * 1000)} ms, peak ${patch.master.out} dBFS`);
-  lines.push('');
+  const baseOf = new Map(rendered.map((r) => [r.patch.id, r.base]));
+  const mapped = Object.entries(roles).filter(([, ids]) => ids.some((id) => baseOf.has(id)));
+  if (mapped.length) {
+    lines.push('', 'Interactions (with more than one sound, play one at random):');
+    for (const [role, ids] of mapped) lines.push(`  ${role.padEnd(14)} ${ids.map((id) => baseOf.get(id)).filter(Boolean).join(', ')}${loops.includes(role) ? '  (repeats until stopped)' : ''}`);
+  }
+  lines.push(...creditLines(credits), '');
   return lines.join('\n');
 }
 
@@ -364,6 +425,7 @@ export function readme(patch, base, info) {
     patch.master.variation
       ? `Natural variation: up to ${patch.master.variation} cents per play. The .js file applies it for you; the audio file does not include it.`
       : 'Natural variation: off.',
+    ...creditLines(info.credits),
     '',
   ].join('\n');
 }

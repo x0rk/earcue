@@ -2,6 +2,7 @@ import { APP_SLUG } from './brand.js';
 import { dbToGain } from './engine/engine.js';
 import { encodeWav, makeZip, moduleSource, patchJson, readme, readPatchFile, setModuleSource, setReadme, slug } from './engine/export.js';
 import { MAX_RENDER_MS, renderPatch } from './engine/render.js';
+import { ROLES, soundsForRole } from './engine/roles.js';
 import { decodeToSample, loadSamples, pruneSamples, sampleDurationMs, storeSample } from './engine/samples.js';
 import { addSampleLayer, addSound, bumpSamples, currentSound, importSet, sampleIdsInSets, setPref, showToast, useStore } from './store.js';
 
@@ -190,9 +191,12 @@ async function encodeAudio(chs, { format, sampleRate, bits }) {
 
 export async function exportSound({ what, scope, name, format, channels, sampleRate, bits }) {
   const enc = new TextEncoder();
-  const info = { format, channels, sampleRate, bits };
+  const { ws } = useStore.getState();
+  const info = { format, channels, sampleRate, bits, credits: ws.credits };
   if (scope === 'set') {
-    const sounds = useStore.getState().ws.sounds;
+    const { sounds } = ws;
+    const roles = Object.fromEntries(ROLES.map((r) => [r.id, soundsForRole(ws, r.id).map((s) => s.id)]).filter(([, ids]) => ids.length));
+    const loops = ROLES.filter((r) => r.loop).map((r) => r.id);
     const files = [];
     const rendered = [];
     const used = new Set();
@@ -206,8 +210,8 @@ export async function exportSound({ what, scope, name, format, channels, sampleR
       if (what === 'audio' || what === 'all') files.push({ name: `${format}/${base}.${format}`, data: await encodeAudio(chs, info) });
       if (what === 'all' || what === 'project') files.push({ name: `projects/${base}.json`, data: enc.encode(patchJson(p)) });
     }
-    if (what === 'code' || what === 'all') files.push({ name: 'sounds.js', data: enc.encode(setModuleSource(rendered)) });
-    files.push({ name: 'README.txt', data: enc.encode(setReadme(rendered, info, what)) });
+    if (what === 'code' || what === 'all') files.push({ name: 'sounds.js', data: enc.encode(setModuleSource(rendered, { roles })) });
+    files.push({ name: 'README.txt', data: enc.encode(setReadme(rendered, info, what, { roles, loops, credits: ws.credits })) });
     const setName = slug(name || 'sound-set');
     download(`${setName}.zip`, makeZip(files), 'application/zip');
     return;

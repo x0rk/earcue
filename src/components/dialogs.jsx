@@ -101,6 +101,7 @@ export function ExportDialog() {
   const P = useStore((s) => currentSound(s));
   const sounds = useStore((s) => s.ws.sounds);
   const soundSetName = useStore((s) => s.ws.name);
+  const credits = useStore((s) => s.ws.credits);
   const count = sounds.length;
   const [scope, setScope] = useState('sound');
   const [what, setWhat] = useState('audio');
@@ -209,6 +210,11 @@ export function ExportDialog() {
             />
             <p className="pl-[76px] text-[12px] text-muted">{FORMAT_NOTE[format]}</p>
           </div>
+        )}
+        {credits.length > 0 && (
+          <p className="text-[12px] text-muted">
+            This set uses recordings from {credits.join(' ')} Zip exports carry the credit in their README. When you share a single file, credit it yourself.
+          </p>
         )}
         {keepsClips && <p className="text-[12px] text-muted">Project files keep each recording whole, trimmed parts included, so you can change the trims later. Code exports include only the part that plays.</p>}
         <label className="flex items-center gap-2 text-[12.5px] text-muted">

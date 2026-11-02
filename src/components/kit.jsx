@@ -1,20 +1,27 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { Checkbox as RCheckbox, Dialog as RDialog, DropdownMenu as RMenu, Switch as RSwitch, Tabs as RTabs } from 'radix-ui';
-import { Archive, Bell, Check, ChevronDown, Copy, Heart, Pencil, SendHorizontal, Share2, Trash2, X } from 'lucide-react';
+import { Archive, Bell, Camera, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, Heart, Lock, LockOpen, Pencil, Phone, PhoneOff, SendHorizontal, Share2, Siren, Timer, Trash2, TriangleAlert, Upload, X } from 'lucide-react';
 import { roleLabel } from '../engine/roles.js';
-import { playRole } from '../playback.js';
+import { loopRole, playRole } from '../playback.js';
 
 // A small UI kit styled after shadcn/ui (MIT, see licenses/shadcn-ui.txt), the components most React
 // apps start from. Every control plays the sound mapped to the interaction it stands for.
 
 const cx = (...c) => c.filter(Boolean).join(' ');
-const KitContext = createContext({ play: () => {}, hover: () => {}, container: null, toast: () => {} });
+const KitContext = createContext({ play: () => {}, loop: () => () => {}, hover: () => {}, container: null, toast: () => {} });
 const useKit = () => useContext(KitContext);
 
 const HOVER_GAP_MS = 90;
 const REPLY_DELAY_MS = 1100;
 const NOTIFY_DELAY_MS = 500;
 const TOAST_MS = 4000;
+// Focus only sounds when a key moved it there, the way a keyboard or remote user hears it.
+const NAV_KEYS = new Set(['Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
+const NAV_KEY_MS = 300;
+const UPLOAD_STEP_MS = 90;
+const UPLOAD_STEP = 4;
+const TIMER_S = 3;
+const FLASH_MS = 180;
 const REPLIES = ['Looks great, thanks!', 'On it. Give me five minutes.', 'Sent the file over.', 'Can we talk at 3?', 'Perfect, shipping it.'];
 
 const FOCUS = 'outline-none focus-visible:border-kit-ring focus-visible:ring-[3px] focus-visible:ring-kit-ring/50';
@@ -45,7 +52,7 @@ function KitButton({ variant = 'default', size = 'default', sound = 'tap', class
   );
 }
 
-function KitSwitch({ label, description, defaultChecked = false }) {
+function KitSwitch({ label, description, defaultChecked = false, sounds = ['toggle-on', 'toggle-off'], onCheckedChange }) {
   const { play } = useKit();
   const id = useRef(`kit-switch-${Math.random().toString(36).slice(2, 8)}`).current;
   return (
@@ -57,7 +64,10 @@ function KitSwitch({ label, description, defaultChecked = false }) {
       <RSwitch.Root
         id={id}
         defaultChecked={defaultChecked}
-        onCheckedChange={(on) => play(on ? 'toggle-on' : 'toggle-off')}
+        onCheckedChange={(on) => {
+          play(on ? sounds[0] : sounds[1]);
+          onCheckedChange?.(on);
+        }}
         className={`group inline-flex h-[1.15rem] w-8 shrink-0 items-center rounded-full border border-transparent shadow-xs transition-all data-[state=checked]:bg-kit-primary data-[state=unchecked]:bg-kit-track-off ${FOCUS}`}
       >
         <RSwitch.Thumb className="pointer-events-none block size-4 rounded-full ring-0 transition-transform data-[state=checked]:translate-x-[calc(100%-2px)] data-[state=checked]:bg-kit-thumb-on data-[state=unchecked]:translate-x-0 data-[state=unchecked]:bg-kit-thumb-off" />
@@ -108,7 +118,7 @@ function KitCard({ title, description, roles, children }) {
 function ButtonsCard() {
   const [liked, setLiked] = useState(false);
   return (
-    <KitCard title="Buttons" description="The actions people take most." roles={['tap', 'hover', 'delete']}>
+    <KitCard title="Buttons" description="The actions people take most. Press Tab to move between them." roles={['tap', 'hover', 'focus', 'delete']}>
       <div className="flex flex-wrap gap-2">
         <KitButton>Continue</KitButton>
         <KitButton variant="secondary">Save draft</KitButton>
@@ -244,7 +254,7 @@ function ChatCard() {
     );
   };
   return (
-    <KitCard title="Messages" description="Sending a message and getting a reply." roles={['send', 'receive']}>
+    <KitCard title="Messages" description="Typing, sending a message and getting a reply." roles={['typing', 'send', 'receive']}>
       <div ref={log} className="flex h-44 flex-col gap-2 overflow-y-auto rounded-lg border border-kit-border p-3" aria-label="Conversation">
         {messages.map((m) => (
           <p key={m.id} className={cx('max-w-[80%] rounded-lg px-3 py-2 text-sm', m.mine ? 'self-end bg-kit-primary text-kit-primary-fg' : 'self-start bg-kit-muted')}>
@@ -253,7 +263,14 @@ function ChatCard() {
         ))}
       </div>
       <form onSubmit={send} className="mt-3 flex gap-2">
-        <input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Type a message" aria-label="Message" className={INPUT} />
+        <input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => (e.key.length === 1 || e.key === 'Backspace') && !e.metaKey && !e.ctrlKey && play('typing')}
+          placeholder="Type a message"
+          aria-label="Message"
+          className={INPUT}
+        />
         <button type="submit" aria-label="Send" className={cx(BUTTON_BASE, BUTTON_VARIANT.default, BUTTON_SIZE.icon)}>
           <SendHorizontal />
         </button>
@@ -395,6 +412,262 @@ function DialogCard() {
   );
 }
 
+const SLIDES = [
+  { title: 'Welcome aboard', body: 'Three quick steps to set up your workspace.' },
+  { title: 'Invite your team', body: 'Work goes faster together. Add people any time.' },
+  { title: 'Pick a theme', body: 'Light, dark or your system setting.' },
+];
+
+function OnboardingCard() {
+  const { play } = useKit();
+  const [step, setStep] = useState(0);
+  const [done, setDone] = useState(false);
+  const go = (next) => {
+    play(next < step ? 'back' : 'swipe');
+    setStep(next);
+  };
+  const last = step === SLIDES.length - 1;
+  return (
+    <KitCard title="Onboarding" description="Paging through steps, going back, and finishing." roles={['swipe', 'back', 'celebrate']}>
+      <div className="flex h-24 flex-col justify-center rounded-lg border border-kit-border bg-kit-muted/40 p-4" aria-live="polite">
+        <p className="text-sm font-semibold">{done ? "You're all set" : SLIDES[step].title}</p>
+        <p className="text-sm text-kit-muted-fg">{done ? 'Your workspace is ready.' : SLIDES[step].body}</p>
+      </div>
+      <div className="mt-3 flex items-center justify-between gap-2">
+        {done ? (
+          <KitButton
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setDone(false);
+              setStep(0);
+            }}
+          >
+            Start over
+          </KitButton>
+        ) : (
+          <>
+            <KitButton variant="ghost" size="sm" sound={null} disabled={step === 0} onClick={() => go(step - 1)}>
+              <ChevronLeft />
+              Back
+            </KitButton>
+            <div className="flex gap-1.5">
+              {SLIDES.map((slide, i) => (
+                <button
+                  key={slide.title}
+                  type="button"
+                  aria-label={`Step ${i + 1}`}
+                  aria-current={i === step ? 'step' : undefined}
+                  onClick={() => i !== step && go(i)}
+                  className={cx('size-2 rounded-full transition-colors', i === step ? 'bg-kit-primary' : 'bg-kit-border hover:bg-kit-muted-fg', FOCUS)}
+                />
+              ))}
+            </div>
+            <KitButton
+              size="sm"
+              sound={null}
+              onClick={() => {
+                if (!last) return go(step + 1);
+                play('celebrate');
+                setDone(true);
+              }}
+            >
+              {last ? 'Finish' : 'Next'}
+              {!last && <ChevronRight />}
+            </KitButton>
+          </>
+        )}
+      </div>
+    </KitCard>
+  );
+}
+
+function UploadCard() {
+  const { play, toast } = useKit();
+  const [progress, setProgress] = useState(null);
+  const pct = useRef(0);
+  const timer = useRef(0);
+  useEffect(() => () => clearTimeout(timer.current), []);
+  const step = () => {
+    pct.current = Math.min(100, pct.current + UPLOAD_STEP);
+    setProgress(pct.current);
+    if (pct.current < 100) {
+      timer.current = setTimeout(step, UPLOAD_STEP_MS);
+      return;
+    }
+    play('complete');
+    setProgress(null);
+    toast({ title: 'Upload complete', description: 'Three files are ready to share.' });
+  };
+  const start = () => {
+    pct.current = 0;
+    step();
+  };
+  const cancel = () => {
+    clearTimeout(timer.current);
+    play('cancel');
+    setProgress(null);
+  };
+  return (
+    <KitCard title="Upload" description="A long task finishing, cancelling it, and a warning." roles={['complete', 'cancel', 'warning']}>
+      {progress === null ? (
+        <div className="flex flex-wrap gap-2">
+          <KitButton sound={null} onClick={start}>
+            <Upload />
+            Upload 3 files
+          </KitButton>
+          <KitButton
+            variant="outline"
+            sound="warning"
+            onClick={() => toast({ title: 'Storage almost full', description: "You've used 95% of your space.", tone: 'error' })}
+          >
+            <TriangleAlert />
+            Check storage
+          </KitButton>
+        </div>
+      ) : (
+        <div className="flex items-center gap-3">
+          <div className="h-2 flex-1 overflow-hidden rounded-full bg-kit-muted" role="progressbar" aria-label="Upload progress" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}>
+            <div className="h-full rounded-full bg-kit-primary transition-[width]" style={{ width: `${progress}%` }} />
+          </div>
+          <KitButton variant="outline" size="sm" sound={null} onClick={cancel}>
+            Cancel
+          </KitButton>
+        </div>
+      )}
+    </KitCard>
+  );
+}
+
+function DeviceCard() {
+  const [locked, setLocked] = useState(false);
+  const [flash, setFlash] = useState(false);
+  const timer = useRef(0);
+  useEffect(() => () => clearTimeout(timer.current), []);
+  return (
+    <KitCard title="Device" description="Locking, connecting headphones and taking a screenshot." roles={['lock', 'unlock', 'connect', 'disconnect', 'capture']}>
+      <div className="relative flex flex-col gap-3">
+        <div className="flex flex-wrap gap-2">
+          <KitButton variant="outline" sound={locked ? 'unlock' : 'lock'} aria-pressed={locked} onClick={() => setLocked(!locked)}>
+            {locked ? <LockOpen /> : <Lock />}
+            {locked ? 'Unlock note' : 'Lock note'}
+          </KitButton>
+          <KitButton
+            variant="outline"
+            sound="capture"
+            onClick={() => {
+              setFlash(true);
+              clearTimeout(timer.current);
+              timer.current = setTimeout(() => setFlash(false), FLASH_MS);
+            }}
+          >
+            <Camera />
+            Screenshot
+          </KitButton>
+        </div>
+        <KitSwitch label="Headphones" description="Connect your earbuds." sounds={['connect', 'disconnect']} />
+        {flash && <div className="pointer-events-none absolute -inset-2 rounded-lg bg-white/70" aria-hidden="true" />}
+      </div>
+    </KitCard>
+  );
+}
+
+function CallsCard() {
+  const { play, loop, toast } = useKit();
+  const [call, setCall] = useState('idle');
+  const [alarm, setAlarm] = useState('idle');
+  const stops = useRef({});
+  const timer = useRef(0);
+  useEffect(
+    () => () => {
+      Object.values(stops.current).forEach((stop) => stop?.());
+      clearTimeout(timer.current);
+    },
+    [],
+  );
+  const stop = (key) => {
+    stops.current[key]?.();
+    stops.current[key] = null;
+  };
+  const ring = () => {
+    setCall('ringing');
+    stops.current.ring = loop('ring');
+  };
+  const answer = (yes) => {
+    stop('ring');
+    play(yes ? 'connect' : 'cancel');
+    setCall(yes ? 'live' : 'idle');
+  };
+  const startTimer = () => {
+    setAlarm('counting');
+    timer.current = setTimeout(() => {
+      setAlarm('ringing');
+      stops.current.alarm = loop('alarm');
+    }, TIMER_S * 1000);
+  };
+  return (
+    <KitCard title="Calls and alarms" description="Sounds that repeat until you act, and an urgent alert." roles={['ring', 'alarm', 'urgent', 'connect', 'disconnect']}>
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between gap-2 rounded-lg border border-kit-border p-3">
+          <span className="text-sm">{call === 'ringing' ? 'Maya is calling…' : call === 'live' ? 'On a call with Maya' : 'No calls'}</span>
+          {call === 'idle' && (
+            <KitButton variant="outline" size="sm" sound={null} onClick={ring}>
+              <Phone />
+              Call me
+            </KitButton>
+          )}
+          {call === 'ringing' && (
+            <span className="flex gap-2">
+              <KitButton variant="destructive" size="sm" sound={null} onClick={() => answer(false)}>
+                Decline
+              </KitButton>
+              <KitButton size="sm" sound={null} onClick={() => answer(true)}>
+                Answer
+              </KitButton>
+            </span>
+          )}
+          {call === 'live' && (
+            <KitButton variant="destructive" size="sm" sound="disconnect" onClick={() => setCall('idle')}>
+              <PhoneOff />
+              End call
+            </KitButton>
+          )}
+        </div>
+        <div className="flex items-center justify-between gap-2 rounded-lg border border-kit-border p-3">
+          <span className="text-sm">{alarm === 'counting' ? `Timer: ${TIMER_S} seconds` : alarm === 'ringing' ? "Time's up" : 'Timer'}</span>
+          {alarm === 'idle' && (
+            <KitButton variant="outline" size="sm" sound={null} onClick={startTimer}>
+              <Timer />
+              Start {TIMER_S} s timer
+            </KitButton>
+          )}
+          {alarm === 'ringing' && (
+            <KitButton
+              size="sm"
+              sound={null}
+              onClick={() => {
+                stop('alarm');
+                setAlarm('idle');
+              }}
+            >
+              Stop
+            </KitButton>
+          )}
+        </div>
+        <KitButton
+          variant="outline"
+          sound="urgent"
+          className="self-start"
+          onClick={() => toast({ title: 'Payments are down', description: 'Checkout is failing for every customer.', tone: 'error' })}
+        >
+          <Siren />
+          Simulate an outage
+        </KitButton>
+      </div>
+    </KitCard>
+  );
+}
+
 const TASKS = ['Pick a key for the set', 'Map every interaction', 'Export the sounds'];
 
 function TasksCard() {
@@ -456,12 +729,14 @@ function Toasts({ toasts, dismiss }) {
 export function KitShowcase({ container }) {
   const [toasts, setToasts] = useState([]);
   const lastHover = useRef(0);
+  const navKey = useRef(-Infinity);
   const timers = useRef([]);
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
   const dismiss = (id) => setToasts((list) => list.filter((t) => t.id !== id));
   const value = {
     container,
     play: playRole,
+    loop: loopRole,
     // Hover only counts for a mouse, and sweeping across a row of buttons plays once, not five times.
     hover: (e) => {
       if (e.pointerType !== 'mouse' || performance.now() - lastHover.current < HOVER_GAP_MS) return;
@@ -476,7 +751,11 @@ export function KitShowcase({ container }) {
   };
   return (
     <KitContext.Provider value={value}>
-      <div className="@container min-h-full bg-kit-bg p-4 text-kit-fg">
+      <div
+        className="@container min-h-full bg-kit-bg p-4 text-kit-fg"
+        onKeyDownCapture={(e) => NAV_KEYS.has(e.key) && (navKey.current = performance.now())}
+        onFocusCapture={() => performance.now() - navKey.current < NAV_KEY_MS && playRole('focus')}
+      >
         <div className="grid items-start gap-4 @3xl:grid-cols-2 @6xl:grid-cols-3">
           <ButtonsCard />
           <SettingsCard />
@@ -486,6 +765,10 @@ export function KitShowcase({ container }) {
           <NotificationsCard />
           <DialogCard />
           <TasksCard />
+          <OnboardingCard />
+          <UploadCard />
+          <DeviceCard />
+          <CallsCard />
         </div>
       </div>
       <Toasts toasts={toasts} dismiss={dismiss} />

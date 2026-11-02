@@ -6,7 +6,8 @@ import { midiOf } from '../src/engine/palette.js';
 const setKey = (id) => `earcue:set:${id}:v1`;
 const META_KEY = 'earcue:meta:v1';
 const LEGACY_KEY = 'earcue:workspace:v1';
-const STARTER_NAMES = ['Tap', 'Toggle on', 'Toggle off', 'Send', 'Receive', 'Success', 'Error', 'Notification'];
+const STARTER_NAMES = starterSounds().map((p) => p.name);
+const BASIC_NAMES = ['Tap', 'Toggle on', 'Toggle off', 'Send', 'Receive', 'Success', 'Error', 'Notification'];
 const STARTER_KEY = { root: 10, scale: 'major-pentatonic' };
 const C_PENT = { root: 0, scale: 'major-pentatonic' };
 
@@ -44,7 +45,7 @@ afterEach(() => {
 });
 
 describe('first visit', () => {
-  it('creates one starter set with eight sounds and the starter key', async () => {
+  it('creates one starter set with every starter sound and the starter key', async () => {
     const store = await freshStore();
     const sets = store.listSets();
     expect(sets.map((s) => s.name)).toEqual(['Starter set']);
@@ -68,6 +69,23 @@ describe('first visit', () => {
     first.deleteSet(first.listSets()[0].id);
     const later = await reloadStore();
     expect(later.listSets()).toEqual([]);
+  });
+
+  it('leaves sets saved by earlier versions as they were, and never rewrites them just by loading', async () => {
+    // A set as the previous release saved it: one sound per role, a key, loudness, no variants or credits.
+    const mine = [{ ...blankPatch('Thock Light'), id: 'a' }, { ...blankPatch('Pop'), id: 'b' }, { ...blankPatch('Alert'), id: 'c' }];
+    const saved = { name: 'My sounds', created: 1, updated: 2, sounds: mine, current: 'b', roles: { tap: 'a', send: null }, key: STARTER_KEY, loudness: { frequent: -26, confirm: -20, alert: -18 } };
+    const store = await freshStore({ url: '/?set=mine', saved: { [META_KEY]: { seeded: true }, [setKey('mine')]: saved } });
+    const before = localStorage.getItem(setKey('mine'));
+    const { ws } = state(store);
+    expect(ws.sounds).toEqual(mine);
+    expect(ws.current).toBe('b');
+    expect(ws.roles).toEqual({ tap: ['a'], send: null });
+    expect(ws.loudness).toEqual(saved.loudness);
+    expect(ws.credits).toEqual([]);
+    vi.runOnlyPendingTimers();
+    expect(localStorage.getItem(setKey('mine'))).toBe(before);
+    expect(store.listSets().map((x) => x.name)).toEqual(['My sounds']);
   });
 
   it('opens the set named in the URL', async () => {
@@ -98,6 +116,13 @@ describe('sets', () => {
     expect(store.readSet(ws.id).key).toEqual(STARTER_KEY);
   });
 
+  it('createSet can start with the basics, the eight sounds the first starter set had', async () => {
+    const store = await freshStore();
+    store.createSet('Small', 'basics');
+    expect(state(store).ws.sounds.map((p) => p.name)).toEqual(BASIC_NAMES);
+    expect(state(store).ws.key).toEqual(STARTER_KEY);
+  });
+
   it('createSet picks a free name', async () => {
     const store = await freshStore();
     store.createSet('Starter set', 'blank');
@@ -111,7 +136,7 @@ describe('sets', () => {
     const { page, ws, toast } = state(store);
     expect(page).toBe('set');
     expect(ws.name).toBe('Imported');
-    expect(ws.sounds.map((p) => p.name)).toEqual(['Tap', 'Toggle on']);
+    expect(ws.sounds.map((p) => p.name)).toEqual(patches.map((p) => p.name));
     expect(shared(ws, { sounds: patches })).toEqual([]);
     expect(window.location.search).toBe(`?set=${ws.id}`);
     expect(toast.text).toBe('Imported 2 sounds as Imported.');
@@ -141,14 +166,14 @@ describe('sets', () => {
     const store = await openStarter();
     const { ws } = state(store);
     const send = ws.sounds.find((p) => p.name === 'Send');
-    store.setRole('tap', send.id);
+    store.setRole('tap', [send.id]);
     store.setRole('hover', null);
     store.goHome();
     store.duplicateSet(ws.id);
     const copy = store.readSet(store.listSets().find((s) => s.name === 'Starter set copy').id);
     const copiedSend = copy.sounds.find((p) => p.name === 'Send');
     expect(copiedSend.id).not.toBe(send.id);
-    expect(copy.roles).toEqual({ tap: copiedSend.id, hover: null });
+    expect(copy.roles).toEqual({ tap: [copiedSend.id], hover: null });
   });
 
   it('deleteSet removes the saved set', async () => {
@@ -267,7 +292,8 @@ describe('palette', () => {
     // D6 and B-flat5 are the third and first notes of B-flat major pentatonic; in C they are E6 and C6.
     expect([note(body.pitchStart), note(body.pitchEnd)]).toEqual([88, 84]);
     expect(state(store).ws.key).toEqual(C_PENT);
-    expect(state(store).toast.text).toMatch(/^Moved 8 sounds into C major pentatonic\./);
+    // Every sound with a note moves; Swipe and Capture are only noise.
+    expect(state(store).toast.text).toMatch(new RegExp(`^Moved ${STARTER_NAMES.length - 2} sounds into C major pentatonic\\.`));
     store.undo();
     expect(state(store).ws.sounds).toEqual(before);
     expect(state(store).ws.key).toEqual(STARTER_KEY);
@@ -337,12 +363,12 @@ describe('createSetFromSound', () => {
     const { ws } = state(store);
     expect(ws.id).not.toBe(starter.id);
     expect(ws.name).toBe('Tap family');
-    expect(ws.sounds.map((p) => p.name)).toEqual(STARTER_NAMES);
+    expect(ws.sounds.map((p) => p.name)).toEqual(BASIC_NAMES);
     expect(ws.key).toEqual(STARTER_KEY);
     expect(ws.sounds.find((p) => p.name === 'Error').tension).toBe(true);
     expect(window.location.search).toBe(`?set=${ws.id}`);
     expect(state(store).toast.text).toBe('Made Tap family from Tap, in Bb major pentatonic.');
-    expect(store.readSet(starter.id).sounds).toHaveLength(8);
+    expect(store.readSet(starter.id).sounds).toHaveLength(STARTER_NAMES.length);
     expect(shared(ws, starter)).toEqual([]);
   });
 
@@ -367,18 +393,82 @@ describe('setRole', () => {
     const store = await openStarter();
     const { ws } = state(store);
     const send = ws.sounds.find((p) => p.name === 'Send');
-    store.setRole('tap', send.id);
+    const tap = ws.sounds.find((p) => p.name === 'Tap');
+    store.setRole('tap', [send.id, tap.id]);
     store.setRole('hover', null);
     vi.runOnlyPendingTimers();
-    expect(store.readSet(ws.id).roles).toEqual({ tap: send.id, hover: null });
+    expect(store.readSet(ws.id).roles).toEqual({ tap: [send.id, tap.id], hover: null });
   });
 
-  it('drops a role set to undefined, so it matches by name again', async () => {
+  it('drops a role set to undefined or to no sounds, so it matches by name again', async () => {
     const store = await openStarter();
     store.setRole('tap', null);
     store.setRole('tap', undefined);
+    store.setRole('send', []);
     vi.runOnlyPendingTimers();
     expect(state(store).ws.roles).toEqual({});
     expect(store.readSet(state(store).ws.id).roles).toEqual({});
+  });
+});
+
+describe('addVariant', () => {
+  it('adds another take after the takes the sound has, which its interaction then plays in turn', async () => {
+    const store = await openStarter();
+    const before = state(store).ws;
+    const tap = before.sounds.find((p) => p.name === 'Tap');
+    store.addVariant(tap.id);
+    const { ws } = state(store);
+    const names = ws.sounds.map((p) => p.name);
+    expect(names.slice(0, 4)).toEqual(['Tap', 'Tap 2', 'Tap 3', 'Tap 4']);
+    expect(ws.current).toBe(ws.sounds[3].id);
+    expect(state(store).toast.text).toBe('Made Tap 4, another take on Tap. Tap now picks one of them at random.');
+    store.undo();
+    expect(state(store).ws.sounds).toEqual(before.sounds);
+  });
+
+  it('joins the interactions that were picked to play the sound', async () => {
+    const store = await openStarter();
+    const send = state(store).ws.sounds.find((p) => p.name === 'Send');
+    store.setRole('tap', [send.id]);
+    store.addVariant(send.id);
+    const { ws } = state(store);
+    const send2 = ws.sounds.find((p) => p.name === 'Send 2');
+    expect(ws.roles.tap).toEqual([send.id, send2.id]);
+    expect(state(store).toast.text).toMatch(/Tap, Send now picks one of them at random\.$/);
+  });
+
+  it('says how to use a take of a sound no interaction plays', async () => {
+    const store = await freshStore({ url: '/?set=x', saved: { [setKey('x')]: { name: 'X', sounds: [{ ...blankPatch('Wobble'), id: 'w' }] } } });
+    store.addVariant('w');
+    expect(state(store).ws.sounds.map((p) => p.name)).toEqual(['Wobble', 'Wobble 2']);
+    expect(state(store).toast.text).toMatch(/Pick both for an interaction in the preview/);
+  });
+});
+
+describe('importKit', () => {
+  const kit = { id: 'demo', name: 'Demo kit', credit: 'Demo kit by Someone, CC BY 4.0.' };
+
+  it('opens the kit as a new set with its interactions and its credit, which duplicates keep', async () => {
+    const store = await freshStore();
+    const sounds = [{ ...blankPatch('Click 1'), id: 'k1' }, { ...blankPatch('Click 2'), id: 'k2' }];
+    store.importKit(kit, sounds, { tap: ['k1', 'k2'], error: ['gone'] });
+    const { ws } = state(store);
+    expect(ws.name).toBe('Demo kit');
+    expect(ws.roles).toEqual({ tap: ['k1', 'k2'] });
+    expect(ws.credits).toEqual([kit.credit]);
+    expect(ws.key).toBeNull();
+    expect(state(store).toast.text).toBe('Opened Demo kit as a set of 2 sounds. Change them as you like; the kit stays as it was.');
+    store.duplicateSet(ws.id);
+    const copy = store.listSets().find((x) => x.name === 'Demo kit copy');
+    expect(store.readSet(copy.id).credits).toEqual([kit.credit]);
+    store.openSet(ws.id);
+    store.createSetFromSound('k1');
+    expect(state(store).ws.credits).toEqual([kit.credit]);
+  });
+
+  it('says how many sounds could not be loaded', async () => {
+    const store = await freshStore();
+    store.importKit(kit, [blankPatch('Click 1')], {}, 3);
+    expect(state(store).toast.text).toBe("Opened Demo kit as a set of 1 sound. 3 sounds couldn't be loaded.");
   });
 });

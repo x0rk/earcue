@@ -10,13 +10,16 @@ const { clipMs, estimateLength, renderLayerAlone, renderPatch } = await import('
 const { moduleSource, readPatchFile } = await import('../../src/engine/export.js');
 const { blankPatch, layerDefaults, starterSounds } = await import('../../src/engine/model.js');
 const { floatToB64, samples } = await import('../../src/engine/samples.js');
+const { ROLES, soundsForRole } = await import('../../src/engine/roles.js');
 
 const SR = 48000;
 // A centered mono layer reaches each channel at -3 dB, because panning is equal-power.
 const CENTER_GAIN = Math.SQRT1_2;
 
-// The longest each starter sound may ring, by role. Frequent sounds stay short; alerts can ring on.
-const MAX_AUDIBLE_MS = { Tap: 60, 'Toggle on': 100, 'Toggle off': 100, Send: 220, Receive: 300, Success: 300, Error: 500, Notification: 500 };
+// The longest each starter sound may ring: what the set checks allow for the interaction it plays,
+// less a margin so a small edit doesn't tip it over. Frequent sounds stay short; alerts can ring on.
+const BUDGET_MS = { frequent: 100, confirm: 250, alert: 500 };
+const MARGIN = 0.9;
 
 describe('starter sounds', () => {
   const sounds = starterSounds();
@@ -39,8 +42,9 @@ describe('starter sounds', () => {
     });
 
     it('is no longer than its role allows', () => {
-      expect(MAX_AUDIBLE_MS).toHaveProperty([name]);
-      expect(renders.get(name).m.audibleMs).toBeLessThan(MAX_AUDIBLE_MS[name]);
+      const role = ROLES.find((r) => soundsForRole({ sounds, roles: {} }, r.id).includes(patch));
+      expect(role, 'plays for an interaction').toBeTruthy();
+      expect(renders.get(name).m.audibleMs).toBeLessThan((role.maxMs || BUDGET_MS[role.tier]) * MARGIN);
     });
   });
 });

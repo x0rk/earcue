@@ -1,4 +1,4 @@
-import { MATERIALS } from './engine.js';
+import { MATERIALS, mulberry32 } from './engine.js';
 
 export const LAYER_TYPES = ['tone', 'noise', 'modal', 'sample'];
 export const TYPE_LABEL = { tone: 'Tone', noise: 'Noise', modal: 'Object', sample: 'Audio' };
@@ -186,7 +186,18 @@ export function presets() {
 }
 
 // The note palette for the starter set: B-flat major pentatonic, so any two notes sound fine together.
-const NOTE = { D5: 587.33, G5: 783.99, Bb5: 932.33, C6: 1046.5, D6: 1174.66, F6: 1396.91, G6: 1567.98, Bb6: 1864.66 };
+const NOTE = {
+  D5: 587.33,
+  F5: 698.46,
+  G5: 783.99,
+  Bb5: 932.33,
+  C6: 1046.5,
+  D6: 1174.66,
+  F6: 1396.91,
+  G6: 1567.98,
+  Bb6: 1864.66,
+  D7: 2349.32,
+};
 // One shared room, and loudness by how often a sound plays: frequent ones quiet, alerts loudest.
 const ROOM = { reverbSize: 0.25, reverbDamping: 0.5 };
 export const LOUDNESS = { frequent: -24, confirm: -20, alert: -18 };
@@ -196,16 +207,73 @@ const SUBTLE = LOUDNESS.frequent;
 const DEFAULT = LOUDNESS.confirm;
 const ALERT = LOUDNESS.alert;
 
+// "Tap 2" is a variant of "Tap": the name without a trailing number.
+export const variantBase = (name) => name.replace(/\s+\d+$/, '');
+
+// How far a variant may move from the sound it was made from. Enough to hear a new take, too little to
+// leave the note (the set checks allow 30 cents) or change what the sound means.
+const VARIANT_CENTS = 12;
+const VARIANT_STRETCH = 0.12;
+const VARIANT_TONE = 0.08;
+const VARIANT_LEVEL_DB = 1;
+
+// Another take of a sound, the way kits ship four taps instead of one: the same design with new noise,
+// and small changes to pitch, length, tone and level, so it is heard as the same sound played again.
+// The same sound and n always give the same variant.
+export function variantOf(patch, n) {
+  const rnd = mulberry32(patch.seed + n * 7919);
+  const around = (amount) => (rnd() * 2 - 1) * amount;
+  const cents = around(VARIANT_CENTS);
+  const ratio = 2 ** (cents / 1200);
+  const stretch = 1 + around(VARIANT_STRETCH);
+  return {
+    ...structuredClone(patch),
+    id: uid(),
+    name: `${variantBase(patch.name)} ${n + 1}`,
+    seed: randSeed(),
+    layers: patch.layers.map((L) => {
+      const M = { ...structuredClone(L), id: uid(), seed: randSeed() };
+      if (L.type === 'tone') Object.assign(M, { pitchStart: L.pitchStart * ratio, pitchEnd: L.pitchEnd * ratio });
+      if (L.type === 'modal') M.freq = L.freq * ratio;
+      if (L.type === 'sample') Object.assign(M, { pitch: L.pitch + cents / 100, slideTo: L.slideTo + cents / 100 });
+      if (L.type !== 'sample') M.decay = Math.max(2, L.decay * stretch);
+      M.filter.freq = Math.min(20000, Math.max(20, L.filter.freq * (1 + around(VARIANT_TONE))));
+      M.level = Math.min(6, Math.max(-48, L.level + around(VARIANT_LEVEL_DB)));
+      return M;
+    }),
+  };
+}
+
 // The sounds most products need, built as one family: one key, one soft material, one room. Taps are
-// shortest and quietest, alerts longest; rising means something good, falling means an ending.
+// shortest and quietest, alerts longest; rising means something good, falling means an ending. It
+// covers every interaction most product sound kits have, and ships variants of the sounds heard most.
 export function starterSounds() {
   const note = (name, hz, over) => mk('tone', { name, pitchStart: hz, pitchEnd: hz, attack: 1, ...over });
   const click = (over) => mk('noise', { name: 'Click', attack: 0.1, decay: 5, filter: { type: 'bandpass', freq: 4800, q: 1.2 }, ...over });
+  const air = (over) => mk('noise', { name: 'Air', color: 'pink', attack: 3, decay: 80, level: -12, filter: { type: 'bandpass', freq: 2000, q: 1.2, envAmt: 1.2, envTime: 80 }, ...over });
+  const knock = (name, hz, over) => mk('modal', { name, material: 'wood', freq: hz, partials: 3, damping: 0.6, brightness: 0.5, decay: 70, ...over });
+  const muted = { type: 'lowpass', freq: 2600, q: 0.7 };
+
+  const tap = patchOf('Tap', 'Buttons and small taps. Short and quiet, because it plays all the time.', [
+    mk('tone', { name: 'Body', wave: 'triangle', pitchStart: NOTE.D6, pitchEnd: NOTE.Bb5, glide: 12, attack: 0.3, decay: 32 }),
+    click({ level: -9 }),
+  ], { ...ROOM, hpf: 300, reverbMix: 0.05, out: SUBTLE, variation: 20 });
+  const typing = patchOf('Typing', 'A key pressed while typing. Four takes, played at random, so a sentence never sounds mechanical.', [
+    click({ name: 'Key', decay: 9, filter: { type: 'bandpass', freq: 3800, q: 1.1 } }),
+    note('Body', NOTE.G5, { wave: 'triangle', attack: 0.3, decay: 18, level: -10 }),
+  ], { ...ROOM, hpf: 400, reverbMix: 0.03, out: SUBTLE, variation: 30 });
+  const variants = (patch, count) => [patch, ...Array.from({ length: count - 1 }, (_, i) => variantOf(patch, i + 1))];
+
   return [
-    patchOf('Tap', 'Buttons and small taps. Short and quiet, because it plays all the time.', [
-      mk('tone', { name: 'Body', wave: 'triangle', pitchStart: NOTE.D6, pitchEnd: NOTE.Bb5, glide: 12, attack: 0.3, decay: 32 }),
-      click({ level: -9 }),
-    ], { ...ROOM, hpf: 300, reverbMix: 0.05, out: SUBTLE, variation: 20 }),
+    ...variants(tap, 3),
+    patchOf('Focus', 'Moving between controls with the keyboard. A faint tick, quieter than a tap.', [
+      note('Tick', NOTE.G6, { attack: 0.5, decay: 28, level: -4 }),
+    ], { ...ROOM, hpf: 300, reverbMix: 0.04, out: SUBTLE, variation: 15 }),
+    ...variants(typing, 4),
+    patchOf('Select', 'Picking a tab, a checkbox or a menu item. One soft note.', [
+      click({ level: -14 }),
+      note('Note', NOTE.F6, { wave: 'triangle', attack: 0.3, decay: 40 }),
+    ], { ...ROOM, hpf: 300, reverbMix: 0.05, out: SUBTLE, variation: 10 }),
     patchOf('Toggle on', 'Switching something on. Two notes that rise; Toggle off is the same pair reversed.', [
       click({ level: -12 }),
       note('Low', NOTE.D6, { wave: 'triangle', attack: 0.4, decay: 30, level: -3 }),
@@ -216,6 +284,21 @@ export function starterSounds() {
       note('High', NOTE.G6, { wave: 'triangle', attack: 0.4, decay: 30, level: -3 }),
       note('Low', NOTE.D6, { wave: 'triangle', start: 35, attack: 0.4, decay: 40 }),
     ], { ...ROOM, hpf: 300, reverbMix: 0.06, out: SUBTLE, variation: 10 }),
+    patchOf('Open', 'A dialog or a menu appearing. A quick lift with a breath of air.', [
+      air(),
+      mk('tone', { name: 'Lift', wave: 'triangle', pitchStart: NOTE.C6, pitchEnd: NOTE.F6, glide: 40, attack: 1, decay: 110 }),
+    ], { ...ROOM, hpf: 300, reverbMix: 0.08, out: DEFAULT }),
+    patchOf('Close', 'A dialog or a menu going away. Open, falling.', [
+      air({ filter: { type: 'bandpass', freq: 2000, q: 1.2, envAmt: -1.2, envTime: 80 } }),
+      mk('tone', { name: 'Drop', wave: 'triangle', pitchStart: NOTE.F6, pitchEnd: NOTE.C6, glide: 40, attack: 1, decay: 90 }),
+    ], { ...ROOM, hpf: 300, reverbMix: 0.08, out: DEFAULT }),
+    patchOf('Back', 'Going back a page. Two quick notes stepping down, lighter than Close.', [
+      note('Note 1', NOTE.F6, { wave: 'triangle', attack: 0.4, decay: 45, level: -3 }),
+      note('Note 2', NOTE.D6, { wave: 'triangle', start: 45, attack: 0.4, decay: 70 }),
+    ], { ...ROOM, hpf: 300, reverbMix: 0.06, out: DEFAULT }),
+    patchOf('Swipe', 'Paging sideways. A short swish of air with no note, so it fits between any two sounds.', [
+      air({ name: 'Swish', attack: 4, decay: 120, level: 0, filter: { type: 'bandpass', freq: 1500, q: 1, envAmt: 1.5, envTime: 120 } }),
+    ], { ...ROOM, hpf: 400, reverbMix: 0.06, out: DEFAULT }),
     patchOf('Send', 'Sending a message or submitting a form. A quick lift that lands on a note.', [
       mk('noise', { name: 'Air', color: 'pink', attack: 3, decay: 55, level: -10, filter: { type: 'bandpass', freq: 2600, q: 1.4, envAmt: -1.5, envTime: 60 } }),
       mk('tone', { name: 'Pop', start: 30, pitchStart: NOTE.C6, pitchEnd: NOTE.F6, glide: 30, attack: 0.5, decay: 80 }),
@@ -229,6 +312,33 @@ export function starterSounds() {
       note('Note 2', NOTE.F6, { start: 60, decay: 100, level: -2 }),
       note('Note 3', NOTE.Bb6, { start: 120, decay: 135, fmRatio: 2, fmIndex: 0.3, fmDecay: 60 }),
     ], { ...ROOM, hpf: 250, reverbMix: 0.12, out: DEFAULT }),
+    patchOf('Complete', 'A long task finished. Success with one more note, climbing a whole octave.', [
+      note('Note 1', NOTE.Bb5, { decay: 80, level: -5 }),
+      note('Note 2', NOTE.D6, { start: 60, decay: 80, level: -4 }),
+      note('Note 3', NOTE.F6, { start: 120, decay: 90, level: -3 }),
+      note('Note 4', NOTE.Bb6, { start: 180, decay: 200, fmRatio: 2, fmIndex: 0.4, fmDecay: 70 }),
+    ], { ...ROOM, hpf: 250, reverbMix: 0.12, out: ALERT }),
+    patchOf('Celebrate', 'A big moment. A fast run up the key that rings out in a bright chord.', [
+      note('Run 1', NOTE.Bb5, { decay: 90, level: -6 }),
+      note('Run 2', NOTE.D6, { start: 55, decay: 90, level: -5 }),
+      note('Run 3', NOTE.F6, { start: 110, decay: 90, level: -4 }),
+      note('Run 4', NOTE.Bb6, { start: 165, decay: 100, level: -4 }),
+      note('Chord 1', NOTE.Bb6, { start: 220, decay: 560, level: -2, fmRatio: 3.5, fmIndex: 0.5, fmDecay: 80 }),
+      note('Chord 2', NOTE.D7, { start: 220, decay: 560, level: -5, fmRatio: 3.5, fmIndex: 0.5, fmDecay: 80 }),
+      mk('noise', { name: 'Sparkle', start: 220, attack: 2, decay: 380, level: -22, filter: { type: 'highpass', freq: 6500, q: 0.7 } }),
+    ], { ...ROOM, hpf: 250, reverbMix: 0.16, out: ALERT }),
+    patchOf('Cancel', 'Backing out. One soft note settling down, neutral rather than wrong.', [
+      click({ level: -16 }),
+      mk('tone', { name: 'Note', pitchStart: NOTE.C6, pitchEnd: NOTE.Bb5, glide: 30, attack: 1, decay: 90, level: -2, filter: muted }),
+    ], { ...ROOM, hpf: 300, reverbMix: 0.06, out: DEFAULT }),
+    patchOf('Delete', 'Removing an item. A crumple of noise and a note that drops away.', [
+      mk('noise', { name: 'Crumple', attack: 1, decay: 120, level: -6, filter: { type: 'bandpass', freq: 3000, q: 1.2, envAmt: -2, envTime: 110 } }),
+      mk('tone', { name: 'Drop', wave: 'triangle', pitchStart: NOTE.F6, pitchEnd: NOTE.Bb5, glide: 90, attack: 1, decay: 120, level: -6 }),
+    ], { ...ROOM, hpf: 300, reverbMix: 0.08, out: DEFAULT }),
+    patchOf('Warning', 'Something may go wrong. The same note twice, firm but not alarming.', [
+      note('Note 1', NOTE.G6, { wave: 'square', decay: 100, level: -2, filter: muted }),
+      note('Note 2', NOTE.G6, { wave: 'square', start: 150, decay: 120, filter: muted }),
+    ], { ...ROOM, hpf: 300, reverbMix: 0.1, out: ALERT }),
     patchOf('Error', 'Something went wrong. Two falling notes with a little edge, never harsh.', [
       note('Note 1', NOTE.G5, { wave: 'square', decay: 70, level: -3, filter: { type: 'lowpass', freq: 2200, q: 0.7 } }),
       note('Note 2', NOTE.D5, { wave: 'square', start: 110, decay: 200, filter: { type: 'lowpass', freq: 2000, q: 0.7 } }),
@@ -237,8 +347,44 @@ export function starterSounds() {
       note('Chime 1', NOTE.F6, { decay: 260, level: -3, fmRatio: 3.5, fmIndex: 0.7, fmDecay: 40 }),
       note('Chime 2', NOTE.Bb6, { start: 110, decay: 380, fmRatio: 3.5, fmIndex: 0.7, fmDecay: 50 }),
     ], { ...ROOM, hpf: 250, reverbMix: 0.14, out: ALERT }),
+    patchOf('Urgent alert', 'Something needs attention now. Three fast, bright pulses on one note.', [
+      ...[0, 100, 200].map((start, i) => note(`Pulse ${i + 1}`, NOTE.Bb6, { wave: 'square', start, decay: 80, level: i ? 0 : -2, filter: { type: 'lowpass', freq: 3200, q: 0.7 } })),
+    ], { ...ROOM, hpf: 300, reverbMix: 0.08, out: ALERT }),
+    patchOf('Ring', 'An incoming call. Two trills of a third; the app repeats it until the call is answered.', [
+      ...[0, 550].flatMap((start, i) => [
+        note(`Trill ${i + 1}`, NOTE.F6, { start, attack: 2, hold: 330, decay: 60, fmRatio: 2, fmIndex: 0.5, fmDecay: 300, lfo: { target: 'amp', rate: 18, depth: 1 } }),
+        note(`Under ${i + 1}`, NOTE.D6, { start, attack: 2, hold: 330, decay: 60, level: -4, lfo: { target: 'amp', rate: 18, depth: 1 } }),
+      ]),
+    ], { ...ROOM, hpf: 300, reverbMix: 0.08, out: ALERT }),
+    patchOf('Alarm', 'A timer going off. Four quick beeps; the app repeats them until the alarm is stopped.', [
+      ...[0, 130, 260, 390].map((start, i) => note(`Beep ${i + 1}`, NOTE.Bb6, { wave: 'square', start, hold: 30, decay: 60, filter: { type: 'lowpass', freq: 3200, q: 0.7 } })),
+    ], { ...ROOM, hpf: 300, reverbMix: 0.06, out: ALERT }),
+    patchOf('Lock', 'Locking. Two wooden knocks stepping down, like a latch closing.', [
+      knock('Knock 1', NOTE.F6, { level: -3 }),
+      knock('Knock 2', NOTE.Bb5, { start: 40, decay: 90 }),
+    ], { ...ROOM, hpf: 300, reverbMix: 0.06, out: DEFAULT }),
+    patchOf('Unlock', 'Unlocking. The Lock knocks, stepping up.', [
+      knock('Knock 1', NOTE.Bb5, { level: -3 }),
+      knock('Knock 2', NOTE.F6, { start: 40, decay: 90 }),
+    ], { ...ROOM, hpf: 300, reverbMix: 0.06, out: DEFAULT }),
+    patchOf('Connect', 'A device or a call connecting. A rising fifth with a soft bell.', [
+      note('Low', NOTE.Bb5, { decay: 80, level: -3, fmRatio: 2, fmIndex: 0.3, fmDecay: 40 }),
+      note('High', NOTE.F6, { start: 60, decay: 130, fmRatio: 2, fmIndex: 0.3, fmDecay: 40 }),
+    ], { ...ROOM, hpf: 300, reverbMix: 0.1, out: DEFAULT }),
+    patchOf('Disconnect', 'It disconnecting. Connect, falling.', [
+      note('High', NOTE.F6, { decay: 80, level: -3, fmRatio: 2, fmIndex: 0.3, fmDecay: 40 }),
+      note('Low', NOTE.Bb5, { start: 60, decay: 130, fmRatio: 2, fmIndex: 0.3, fmDecay: 40 }),
+    ], { ...ROOM, hpf: 300, reverbMix: 0.1, out: DEFAULT }),
+    patchOf('Capture', 'Taking a photo or a screenshot. A shutter: two clicks, open and close, with no note.', [
+      click({ name: 'Open', decay: 18, filter: { type: 'bandpass', freq: 4000, q: 1.5 } }),
+      click({ name: 'Close', start: 50, decay: 30, level: -3, filter: { type: 'bandpass', freq: 2500, q: 1.2 } }),
+    ], { ...ROOM, hpf: 400, reverbMix: 0.05, out: DEFAULT }),
   ];
 }
+
+// The eight sounds the first starter set had, for a set that starts small.
+const BASICS = ['Tap', 'Toggle on', 'Toggle off', 'Send', 'Receive', 'Success', 'Error', 'Notification'];
+export const basicSounds = () => starterSounds().filter((p) => BASICS.includes(p.name));
 
 const OPPOSITE_WORDS = [
   ['on', 'off'],
