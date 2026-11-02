@@ -1,12 +1,13 @@
-import { useEffect, useRef } from 'react';
-import { Maximize2, Minus, Plus } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Maximize2, Minus, Play, Plus, Repeat } from 'lucide-react';
 import { dbToGain, sampleRates } from '../engine/engine.js';
 import { TYPE_LABEL } from '../engine/model.js';
 import { clipMs, estimateLength } from '../engine/render.js';
 import { samples, sampleDurationMs } from '../engine/samples.js';
-import { comparePatch, onPlay, results } from '../playback.js';
+import { comparePatch, onPlay, playCurrent, results, setLoop } from '../playback.js';
 import { commit, currentSound, editLayer, select, setPref, setView, useStore } from '../store.js';
-import { IconButton, Button, Select } from './ui.jsx';
+import { IconButton, Button, ContextMenu, Select } from './ui.jsx';
+import { addLayerItems, layerMenuItems, pasteItem } from './sidebar.jsx';
 
 const LANE = { ruler: 26, output: 96, layer: 64 };
 const HEADER_W = 120;
@@ -356,9 +357,28 @@ export function fitTimeline() {
   setView({ ...useStore.getState().view, auto: true });
 }
 
+// What right-clicking the timeline offers: a layer's own actions on its lane, playing on the output
+// lane, and adding a layer anywhere else.
+function timelineMenu(hit) {
+  const s = useStore.getState();
+  if (hit?.kind === 'layer') {
+    const L = currentSound(s).layers.find((x) => x.id === hit.id);
+    return L ? layerMenuItems(L) : [];
+  }
+  if (hit?.kind === 'output' || hit?.kind === 'ruler') {
+    return [
+      { label: 'Play', icon: <Play />, shortcut: 'Space', onSelect: playCurrent },
+      { label: s.loop ? 'Stop looping' : 'Loop', icon: <Repeat />, onSelect: () => setLoop(!s.loop) },
+    ];
+  }
+  return [...addLayerItems(), 'sep', pasteItem(s.clipboard)];
+}
+
 export function Timeline() {
   const wrapRef = useRef(null);
   const canvasRef = useRef(null);
+  const geomRef = useRef(null);
+  const [menu, setMenu] = useState([]);
 
   useEffect(() => {
     const wrap = wrapRef.current;
@@ -371,7 +391,7 @@ export function Timeline() {
     const redraw = () => {
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
-        geom = draw(canvas, wrap, playhead);
+        geom = geomRef.current = draw(canvas, wrap, playhead);
       });
     };
     const unsub = useStore.subscribe(redraw);
@@ -380,17 +400,23 @@ export function Timeline() {
     const media = window.matchMedia('(prefers-color-scheme: dark)');
     media.addEventListener('change', redraw);
     document.fonts?.ready.then(redraw);
-    const unPlay = onPlay(({ t0, durMs, ctx }) => {
+    const unPlay = onPlay((event) => {
       cancelAnimationFrame(playRaf);
+      if (!event) {
+        playhead = null;
+        geom = geomRef.current = draw(canvas, wrap, null);
+        return;
+      }
+      const { t0, durMs, ctx } = event;
       const tick = () => {
         const ms = (ctx.currentTime - t0) * 1000;
         if (ms > durMs + 20) {
           playhead = null;
-          geom = draw(canvas, wrap, null);
+          geom = geomRef.current = draw(canvas, wrap, null);
           return;
         }
         playhead = Math.max(0, ms);
-        geom = draw(canvas, wrap, playhead);
+        geom = geomRef.current = draw(canvas, wrap, playhead);
         playRaf = requestAnimationFrame(tick);
       };
       playRaf = requestAnimationFrame(tick);
@@ -404,6 +430,11 @@ export function Timeline() {
     const onDown = (e) => {
       const hit = hitTest(geom, e.offsetX, e.offsetY);
       if (!hit) return;
+      // A right-click selects the layer it lands on, for its menu, but never starts a drag.
+      if (e.button !== 0) {
+        if (hit.kind === 'layer' && useStore.getState().sel?.id !== hit.id) select({ kind: 'layer', id: hit.id });
+        return;
+      }
       if (hit.kind === 'output') {
         select({ kind: 'output' });
         return;
@@ -521,11 +552,13 @@ export function Timeline() {
 
   return (
     <div ref={wrapRef} className="relative min-h-[220px] flex-1 overflow-y-auto overflow-x-hidden">
-      <canvas
-        ref={canvasRef}
-        className="block w-full touch-pan-y"
-        aria-label="Timeline. Drag a block to move it. Drag the round handles to change how fast it starts, how loud it is and how long it lasts."
-      />
+      <ContextMenu items={menu} onOpen={(e) => setMenu(timelineMenu(hitTest(geomRef.current, e.nativeEvent.offsetX, e.nativeEvent.offsetY)))}>
+        <canvas
+          ref={canvasRef}
+          className="block w-full touch-pan-y"
+          aria-label="Timeline. Drag a block to move it. Drag the round handles to change how fast it starts, how loud it is and how long it lasts."
+        />
+      </ContextMenu>
     </div>
   );
 }

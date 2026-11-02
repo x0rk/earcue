@@ -58,7 +58,7 @@ Most UI sounds today come from frozen sound packs or from code someone tuned by 
 - Checks flag what breaks a family: sounds that start late, bass that small speakers can't play, sounds too long for their interaction, frequent sounds as loud as alerts, notes outside the set's key, and notes that rub where one sound runs into the next. Notes from the wider scale around a pentatonic key count as fitting, a quick slide counts where it lands, and a sound can be marked as clashing on purpose, the way an error often does.
 - Compare against another sound or any audio file, with overlaid waveforms and frequency charts.
 - Read the measurements side by side: length, start delay, peak, average loudness, brightness and bass.
-- Balance layers in the mixer. Undo anything. Use keyboard shortcuts for the common actions.
+- Balance layers in the mixer. Undo anything. Use keyboard shortcuts for the common actions, or right-click a sound, a layer, a set or a kit for everything you can do with it.
 
 <img src="docs/preview.png" alt="The preview, full screen: on the left, the sound picked for each interaction; on the right, buttons, switches, a chat and a form that play those sounds.">
 

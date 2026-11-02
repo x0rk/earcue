@@ -107,21 +107,56 @@ function toBuffer(c, res) {
 }
 
 const listeners = new Set();
+// fn({ t0, durMs, ctx }) when a tracked sound starts, and fn(null) when playback stops.
 export function onPlay(fn) {
   listeners.add(fn);
   return () => listeners.delete(fn);
 }
 
-export function playResult(res, { when, track = false, variation = 0 } = {}) {
+// What the editor is playing, so it can be stopped when you move to another sound. The preview's
+// interaction sounds are left alone: they belong to the UI being tried, not to the sound being edited.
+const voices = new Set();
+// Long enough to fade without a click, short enough to feel instant.
+const STOP_FADE_S = 0.008;
+
+function startVoice(c, src, when, editor) {
+  const gain = c.createGain();
+  src.connect(gain).connect(c.destination);
+  src.start(when);
+  if (!editor) return;
+  const voice = { src, gain };
+  voices.add(voice);
+  src.onended = () => voices.delete(voice);
+}
+
+// Silences everything the editor started and clears the playhead.
+export function stopPlayback() {
+  clearTimeout(loopTimer);
+  if (useStore.getState().loop) useStore.setState({ loop: false });
+  if (ctx) {
+    const now = ctx.currentTime;
+    for (const { src, gain } of voices) {
+      gain.gain.setTargetAtTime(0, now, STOP_FADE_S / 3);
+      try {
+        src.stop(now + STOP_FADE_S);
+      } catch {
+        // A source that has not started yet can still be stopped; one that already ended needs nothing.
+      }
+    }
+  }
+  voices.clear();
+  listeners.forEach((fn) => fn(null));
+}
+
+export function playResult(res, { when, track = false, variation = 0, editor = true } = {}) {
   const c = audioCtx();
   if (!c || !res) return null;
   const src = c.createBufferSource();
   src.buffer = toBuffer(c, res);
   const cents = variation ? (Math.random() * 2 - 1) * variation : 0;
   src.playbackRate.value = Math.pow(2, cents / 1200);
-  src.connect(c.destination);
   const t0 = Math.max(c.currentTime + 0.005, when ?? c.currentTime + 0.01);
-  src.start(t0);
+  startVoice(c, src, t0, editor);
   if (track) {
     const event = { t0, durMs: (res.duration * 1000) / src.playbackRate.value, ctx: c };
     listeners.forEach((fn) => fn(event));
@@ -148,8 +183,7 @@ export function playSample(sample) {
   if (!c || !sample) return;
   const s = c.createBufferSource();
   s.buffer = sampleToBufferSafe(c, sample);
-  s.connect(c.destination);
-  s.start();
+  startVoice(c, s, c.currentTime, true);
 }
 
 let loopTimer = 0;
@@ -213,7 +247,7 @@ export async function playRole(roleId) {
   if (!sound) return 0;
   try {
     const res = await renderCached(sound);
-    playResult(res, { variation: sound.master.variation });
+    playResult(res, { variation: sound.master.variation, editor: false });
     return res.duration;
   } catch (e) {
     console.error(e);
@@ -254,8 +288,14 @@ export async function playScene() {
   const renders = await Promise.all(steps.map((x) => renderCached(x.sound)));
   let t = c.currentTime + 0.05;
   steps.forEach((step, i) => {
-    playResult(renders[i], { when: t, variation: step.sound.master.variation });
+    playResult(renders[i], { when: t, variation: step.sound.master.variation, editor: false });
     setTimeout(() => roleListeners.forEach((fn) => fn(step)), (t - c.currentTime) * 1000);
     t += Math.max(renders[i].duration, 0.15) + SCENE_GAP_S;
   });
 }
+
+// Moving to another sound, another set or the home page stops what the editor was playing, so you
+// never hear the last sound while looking at the next one.
+useStore.subscribe((s, prev) => {
+  if (s.page !== prev.page || s.ws?.id !== prev.ws?.id || s.ws?.current !== prev.ws?.current) stopPlayback();
+});

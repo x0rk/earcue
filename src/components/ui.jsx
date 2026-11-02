@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { Collapsible, Dialog as RDialog, DropdownMenu, Select as RSelect, Slider, Switch as RSwitch, ToggleGroup, Tooltip as RTooltip } from 'radix-ui';
+import { Collapsible, ContextMenu as RContextMenu, Dialog as RDialog, DropdownMenu, Select as RSelect, Slider, Switch as RSwitch, ToggleGroup, Tooltip as RTooltip } from 'radix-ui';
 import { Check, ChevronDown, ChevronUp, X } from 'lucide-react';
 import { clip, oneLine } from '../engine/model.js';
 import { commit, setHint, toggleOpenMore, useStore } from '../store.js';
@@ -339,52 +339,105 @@ export function Select({ value, onChange, groups, placeholder, label, className,
 }
 
 // ---------- menu ----------
-export function Menu({ trigger, items, align = 'end' }) {
-  // An item that moves focus somewhere itself, like Rename, sets keepFocus so the menu doesn't pull it back.
+const MENU_CONTENT = 'z-50 min-w-[200px] rounded-xl border border-line-strong bg-panel p-1 shadow-pop animate-pop-in';
+
+// The items of a menu, for the ⋯ button (DropdownMenu) and for right-click (ContextMenu), so the two
+// always offer the same actions. An item is { label, icon, description, shortcut, danger, disabled,
+// keepFocus, onSelect }, or 'sep' for a divider.
+function menuItems(Kit, items, keepFocus) {
+  return items.map((it, i) =>
+    it === 'sep' ? (
+      <Kit.Separator key={`sep-${i}`} className="my-1 h-px bg-line" />
+    ) : (
+      <Kit.Item
+        key={it.label}
+        disabled={it.disabled}
+        onSelect={() => {
+          keepFocus.current = !!it.keepFocus;
+          it.onSelect?.();
+        }}
+        className={cx(
+          'flex select-none items-center gap-2.5 rounded-md px-2 py-1.5 text-[13px] outline-none data-[disabled]:opacity-40 data-[highlighted]:bg-field [&_svg]:size-4',
+          it.danger ? 'text-hot' : 'text-ink',
+        )}
+      >
+        {it.icon}
+        <span className="flex flex-col">
+          <span>{it.label}</span>
+          {it.description && <span className="text-[11.5px] text-muted">{it.description}</span>}
+        </span>
+        {it.shortcut && <span className="ml-auto pl-4 font-mono text-[11px] text-muted">{keyLabel(it.shortcut)}</span>}
+      </Kit.Item>
+    ),
+  );
+}
+
+// An item that moves focus somewhere itself, like Rename, sets keepFocus so the menu doesn't pull it back.
+function useKeepFocus() {
   const keepFocus = useRef(false);
+  const onCloseAutoFocus = (e) => {
+    if (!keepFocus.current) return;
+    keepFocus.current = false;
+    e.preventDefault();
+  };
+  return [keepFocus, onCloseAutoFocus];
+}
+
+export function Menu({ trigger, items, align = 'end' }) {
+  const [keepFocus, onCloseAutoFocus] = useKeepFocus();
   return (
     <DropdownMenu.Root>
       <DropdownMenu.Trigger asChild>{trigger}</DropdownMenu.Trigger>
       <DropdownMenu.Portal>
-        <DropdownMenu.Content
-          align={align}
-          sideOffset={6}
-          className="z-50 min-w-[200px] rounded-xl border border-line-strong bg-panel p-1 shadow-pop animate-pop-in"
-          onCloseAutoFocus={(e) => {
-            if (!keepFocus.current) return;
-            keepFocus.current = false;
-            e.preventDefault();
-          }}
-        >
-          {items.map((it, i) =>
-            it === 'sep' ? (
-              <DropdownMenu.Separator key={`sep-${i}`} className="my-1 h-px bg-line" />
-            ) : (
-              <DropdownMenu.Item
-                key={it.label}
-                disabled={it.disabled}
-                onSelect={() => {
-                  keepFocus.current = !!it.keepFocus;
-                  it.onSelect?.();
-                }}
-                className={cx(
-                  'flex select-none items-center gap-2.5 rounded-md px-2 py-1.5 text-[13px] outline-none data-[disabled]:opacity-40 data-[highlighted]:bg-field [&_svg]:size-4',
-                  it.danger ? 'text-hot' : 'text-ink',
-                )}
-              >
-                {it.icon}
-                <span className="flex flex-col">
-                  <span>{it.label}</span>
-                  {it.description && <span className="text-[11.5px] text-muted">{it.description}</span>}
-                </span>
-                {it.shortcut && <span className="ml-auto pl-4 font-mono text-[11px] text-muted">{keyLabel(it.shortcut)}</span>}
-              </DropdownMenu.Item>
-            ),
-          )}
+        <DropdownMenu.Content align={align} sideOffset={6} className={MENU_CONTENT} onCloseAutoFocus={onCloseAutoFocus}>
+          {menuItems(DropdownMenu, items, keepFocus)}
         </DropdownMenu.Content>
       </DropdownMenu.Portal>
     </DropdownMenu.Root>
   );
+}
+
+// Where the browser's own menu is the useful one: copy and paste in fields and selectable text, and
+// opening or copying a link.
+const KEEPS_BROWSER_MENU = 'input, textarea, [contenteditable="true"], a[href], [data-selectable]';
+
+// The menu for what is under the pointer, on right-click or a long press. The innermost one wins, so
+// a row inside a list shows the row's menu, not the list's. Without items it does nothing.
+export function ContextMenu({ items, disabled = false, onOpen, children }) {
+  const [keepFocus, onCloseAutoFocus] = useKeepFocus();
+  // Decided as the button goes down, before the menu event, so a field or link inside keeps its own menu.
+  const [browserMenu, setBrowserMenu] = useState(false);
+  if (!items?.length && !onOpen) return children;
+  return (
+    <RContextMenu.Root modal={false}>
+      <RContextMenu.Trigger
+        asChild
+        disabled={disabled || browserMenu}
+        onPointerDownCapture={(e) => setBrowserMenu(!!e.target.closest?.(KEEPS_BROWSER_MENU))}
+        onContextMenu={onOpen}
+      >
+        {children}
+      </RContextMenu.Trigger>
+      <RContextMenu.Portal>
+        {items?.length > 0 && (
+          <RContextMenu.Content className={MENU_CONTENT} onCloseAutoFocus={onCloseAutoFocus}>
+            {menuItems(RContextMenu, items, keepFocus)}
+          </RContextMenu.Content>
+        )}
+      </RContextMenu.Portal>
+    </RContextMenu.Root>
+  );
+}
+
+// Right-clicking where the app has no menu shows nothing, as in a native app. Text fields, links and
+// text marked as selectable keep the browser's menu, for copy and paste.
+export function quietContextMenus() {
+  const onContextMenu = (e) => {
+    if (e.defaultPrevented || e.target.closest?.(KEEPS_BROWSER_MENU)) return;
+    e.preventDefault();
+  };
+  document.addEventListener('contextmenu', onContextMenu);
+  return () => document.removeEventListener('contextmenu', onContextMenu);
 }
 
 // ---------- pick many ----------
