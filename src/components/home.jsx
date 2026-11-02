@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { RadioGroup } from 'radix-ui';
-import { Copy, FolderOpen, MoreHorizontal, Pencil, Play, Plus, Trash2, Upload } from 'lucide-react';
+import { Copy, ExternalLink, FileText, FolderOpen, MoreHorizontal, Pencil, Play, Plus, Trash2, Upload } from 'lucide-react';
 import { APP_NAME } from '../brand.js';
 import { MAX_NAME, uniqueName } from '../engine/model.js';
 import { loadSamples } from '../engine/samples.js';
@@ -9,7 +9,7 @@ import { pickSetFiles } from '../io.js';
 import { loadKits, openKit, playKitSound } from '../kits.js';
 import { previewPatch } from '../playback.js';
 import { closeDialog, createSet, deleteSet, duplicateSet, openDialog, openSet, readSet, refreshSets, renameSet, useStore } from '../store.js';
-import { Button, Dialog, EditableText, Menu, Select } from './ui.jsx';
+import { Button, ContextMenu, Dialog, EditableText, Menu, Select } from './ui.jsx';
 import { LogoMark } from './icons.jsx';
 import { ThemeButton } from './top-bar.jsx';
 
@@ -37,62 +37,66 @@ async function playFromSet(setId, soundId) {
 function SetCard({ set }) {
   const [renaming, setRenaming] = useState(false);
   const extra = set.sounds.length - MAX_CHIPS;
+  const items = [
+    { label: 'Open', icon: <FolderOpen />, onSelect: () => openSet(set.id) },
+    // The field mounts after the menu has closed, or the menu's focus trap would pull focus back.
+    { label: 'Rename', icon: <Pencil />, keepFocus: true, onSelect: () => requestAnimationFrame(() => setRenaming(true)) },
+    { label: 'Duplicate', icon: <Copy />, onSelect: () => duplicateSet(set.id) },
+    'sep',
+    { label: 'Delete', icon: <Trash2 />, danger: true, onSelect: () => openDialog('delete-set', set.id) },
+  ];
   return (
-    <div className="group relative flex h-full min-h-[164px] flex-col gap-3 rounded-2xl border border-line bg-panel p-4 transition-colors hover:border-line-strong">
-      {/* The whole card opens the set. The name field, the menu and the sound buttons sit above it. */}
-      <button type="button" className="absolute inset-0 rounded-2xl" aria-label={`Open ${set.name}`} onClick={() => openSet(set.id)} />
-      <div className="pointer-events-none flex items-start gap-2">
-        <div className="min-w-0 flex-1">
-          {renaming ? (
-            <EditableText
-              startEditing
-              label="Set name"
-              value={set.name}
-              className="pointer-events-auto relative z-10 -ml-1.5 h-7 w-full text-[15px] font-semibold"
-              onCommit={(v) => renameSet(set.id, v)}
-              onDone={() => setRenaming(false)}
+    <ContextMenu items={items} disabled={renaming}>
+      <div className="group relative flex h-full min-h-[164px] flex-col gap-3 rounded-2xl border border-line bg-panel p-4 transition-colors hover:border-line-strong data-[state=open]:border-line-strong">
+        {/* The whole card opens the set. The name field, the menu and the sound buttons sit above it. */}
+        <button type="button" className="absolute inset-0 rounded-2xl" aria-label={`Open ${set.name}`} onClick={() => openSet(set.id)} />
+        <div className="pointer-events-none flex items-start gap-2">
+          <div className="min-w-0 flex-1">
+            {renaming ? (
+              <EditableText
+                startEditing
+                label="Set name"
+                value={set.name}
+                className="pointer-events-auto relative z-10 -ml-1.5 h-7 w-full text-[15px] font-semibold"
+                onCommit={(v) => renameSet(set.id, v)}
+                onDone={() => setRenaming(false)}
+              />
+            ) : (
+              <h2 className="truncate text-[15px] font-semibold tracking-tight">{set.name}</h2>
+            )}
+            <p className="mt-0.5 text-[12px] text-muted">
+              {set.sounds.length} sound{set.sounds.length === 1 ? '' : 's'} · {editedLabel(set.updated)}
+            </p>
+          </div>
+          <div className="pointer-events-auto relative z-10 -mr-1.5 -mt-1">
+            <Menu
+              trigger={
+                <Button variant="ghost" size="iconSm" aria-label={`More actions for ${set.name}`}>
+                  <MoreHorizontal />
+                </Button>
+              }
+              items={items.slice(1)}
             />
-          ) : (
-            <h2 className="truncate text-[15px] font-semibold tracking-tight">{set.name}</h2>
-          )}
-          <p className="mt-0.5 text-[12px] text-muted">
-            {set.sounds.length} sound{set.sounds.length === 1 ? '' : 's'} · {editedLabel(set.updated)}
-          </p>
+          </div>
         </div>
-        <div className="pointer-events-auto relative z-10 -mr-1.5 -mt-1">
-          <Menu
-            trigger={
-              <Button variant="ghost" size="iconSm" aria-label={`More actions for ${set.name}`}>
-                <MoreHorizontal />
-              </Button>
-            }
-            items={[
-              // The field mounts after the menu has closed, or the menu's focus trap would pull focus back.
-              { label: 'Rename', icon: <Pencil />, keepFocus: true, onSelect: () => requestAnimationFrame(() => setRenaming(true)) },
-              { label: 'Duplicate', icon: <Copy />, onSelect: () => duplicateSet(set.id) },
-              'sep',
-              { label: 'Delete', icon: <Trash2 />, danger: true, onSelect: () => openDialog('delete-set', set.id) },
-            ]}
-          />
-        </div>
+        <ul className="pointer-events-none mt-auto flex flex-wrap gap-1.5" aria-label={`Sounds in ${set.name}`}>
+          {set.sounds.slice(0, MAX_CHIPS).map((sound) => (
+            <li key={sound.id}>
+              <button
+                type="button"
+                className="pointer-events-auto relative z-10 inline-flex h-7 max-w-[160px] items-center gap-1.5 rounded-full bg-field px-2.5 text-[12px] text-ink hover:bg-field-hover"
+                aria-label={`Play ${sound.name}`}
+                onClick={() => playFromSet(set.id, sound.id)}
+              >
+                <Play className="size-2.5 shrink-0 fill-current text-muted" />
+                <span className="truncate">{sound.name}</span>
+              </button>
+            </li>
+          ))}
+          {extra > 0 && <li className="flex h-7 items-center px-1 text-[12px] text-muted">+{extra} more</li>}
+        </ul>
       </div>
-      <ul className="pointer-events-none mt-auto flex flex-wrap gap-1.5" aria-label={`Sounds in ${set.name}`}>
-        {set.sounds.slice(0, MAX_CHIPS).map((sound) => (
-          <li key={sound.id}>
-            <button
-              type="button"
-              className="pointer-events-auto relative z-10 inline-flex h-7 max-w-[160px] items-center gap-1.5 rounded-full bg-field px-2.5 text-[12px] text-ink hover:bg-field-hover"
-              aria-label={`Play ${sound.name}`}
-              onClick={() => playFromSet(set.id, sound.id)}
-            >
-              <Play className="size-2.5 shrink-0 fill-current text-muted" />
-              <span className="truncate">{sound.name}</span>
-            </button>
-          </li>
-        ))}
-        {extra > 0 && <li className="flex h-7 items-center px-1 text-[12px] text-muted">+{extra} more</li>}
-      </ul>
-    </div>
+    </ContextMenu>
   );
 }
 
@@ -132,48 +136,58 @@ function KitCard({ kits }) {
   };
   const chips = kitChips(kit);
   const extra = kit.sounds.length - chips.length;
+  const visit = (url) => window.open(url, '_blank', 'noopener,noreferrer');
+  const items = [
+    { label: 'Open as a set', icon: <FolderOpen />, disabled: !!loading, onSelect: open },
+    ...(chips[0] ? [{ label: `Play ${chips[0].label}`, icon: <Play />, onSelect: () => playKitSound(kit, chips[0].sound) }] : []),
+    'sep',
+    { label: `Read the ${kit.license} licence`, icon: <FileText />, disabled: !kit.licenseUrl, onSelect: () => visit(kit.licenseUrl) },
+    { label: 'Visit the source', description: kit.by, icon: <ExternalLink />, disabled: !kit.source, onSelect: () => visit(kit.source) },
+  ];
   return (
-    <div className="flex h-full min-h-[164px] flex-col gap-3 rounded-2xl border border-line bg-panel p-4">
-      <div className="flex items-start gap-2">
-        <div className="min-w-0 flex-1">
-          <h3 className="truncate text-[15px] font-semibold tracking-tight">{kits.length > 1 ? kit.name.replace(` ${kit.pack}`, '') : kit.name}</h3>
-          <p className="mt-0.5 text-[12px] text-muted">
-            {kit.by} ·{' '}
-            <a href={kit.licenseUrl} target="_blank" rel="noreferrer" className="underline decoration-line-strong underline-offset-2 hover:text-ink">
-              {kit.license}
-            </a>
-          </p>
+    <ContextMenu items={items}>
+      <div className="flex h-full min-h-[164px] flex-col gap-3 rounded-2xl border border-line bg-panel p-4 data-[state=open]:border-line-strong">
+        <div className="flex items-start gap-2">
+          <div className="min-w-0 flex-1">
+            <h3 className="truncate text-[15px] font-semibold tracking-tight">{kits.length > 1 ? kit.name.replace(` ${kit.pack}`, '') : kit.name}</h3>
+            <p className="mt-0.5 text-[12px] text-muted">
+              {kit.by} ·{' '}
+              <a href={kit.licenseUrl} target="_blank" rel="noreferrer" className="underline decoration-line-strong underline-offset-2 hover:text-ink">
+                {kit.license}
+              </a>
+            </p>
+          </div>
+          {kits.length > 1 && (
+            <Select label={`${kit.name.replace(` ${kit.pack}`, '')} pack`} size="sm" className="w-[118px]" value={kit.id} onChange={setId} groups={[{ items: kits.map((k) => ({ value: k.id, label: k.pack })) }]} />
+          )}
         </div>
-        {kits.length > 1 && (
-          <Select label={`${kit.name.replace(` ${kit.pack}`, '')} pack`} size="sm" className="w-[118px]" value={kit.id} onChange={setId} groups={[{ items: kits.map((k) => ({ value: k.id, label: k.pack })) }]} />
-        )}
+        <p className="text-[12.5px] leading-snug text-muted">{kit.about}</p>
+        <ul className="mt-auto flex flex-wrap gap-1.5" aria-label={`Sounds in ${kit.name}`}>
+          {chips.map(({ sound, label }) => (
+            <li key={sound.file}>
+              <button
+                type="button"
+                className="inline-flex h-7 max-w-[160px] items-center gap-1.5 rounded-full bg-field px-2.5 text-[12px] text-ink hover:bg-field-hover"
+                aria-label={`Play ${label} from ${kit.name}`}
+                title={sound.name}
+                onClick={() => playKitSound(kit, sound)}
+              >
+                <Play className="size-2.5 shrink-0 fill-current text-muted" />
+                <span className="truncate">{label}</span>
+              </button>
+            </li>
+          ))}
+          {extra > 0 && <li className="flex h-7 items-center px-1 text-[12px] text-muted">+{extra} more</li>}
+        </ul>
+        <div className="flex items-center justify-between gap-2 border-t border-line pt-3">
+          <span className="text-[12px] text-muted">{kit.sounds.length} sounds</span>
+          <Button variant="secondary" size="sm" disabled={!!loading} onClick={open} aria-label={`Open ${kit.name} as a set`}>
+            <FolderOpen />
+            {loading ? `Loading ${loading.done} of ${loading.total}` : 'Open as a set'}
+          </Button>
+        </div>
       </div>
-      <p className="text-[12.5px] leading-snug text-muted">{kit.about}</p>
-      <ul className="mt-auto flex flex-wrap gap-1.5" aria-label={`Sounds in ${kit.name}`}>
-        {chips.map(({ sound, label }) => (
-          <li key={sound.file}>
-            <button
-              type="button"
-              className="inline-flex h-7 max-w-[160px] items-center gap-1.5 rounded-full bg-field px-2.5 text-[12px] text-ink hover:bg-field-hover"
-              aria-label={`Play ${label} from ${kit.name}`}
-              title={sound.name}
-              onClick={() => playKitSound(kit, sound)}
-            >
-              <Play className="size-2.5 shrink-0 fill-current text-muted" />
-              <span className="truncate">{label}</span>
-            </button>
-          </li>
-        ))}
-        {extra > 0 && <li className="flex h-7 items-center px-1 text-[12px] text-muted">+{extra} more</li>}
-      </ul>
-      <div className="flex items-center justify-between gap-2 border-t border-line pt-3">
-        <span className="text-[12px] text-muted">{kit.sounds.length} sounds</span>
-        <Button variant="secondary" size="sm" disabled={!!loading} onClick={open} aria-label={`Open ${kit.name} as a set`}>
-          <FolderOpen />
-          {loading ? `Loading ${loading.done} of ${loading.total}` : 'Open as a set'}
-        </Button>
-      </div>
-    </div>
+    </ContextMenu>
   );
 }
 
@@ -329,54 +343,63 @@ export function Home() {
     return () => window.removeEventListener('storage', onStorage);
   }, []);
 
+  const pageItems = [
+    { label: 'New set', icon: <Plus />, onSelect: () => openDialog('new-set') },
+    { label: 'Import a set', description: "An exported set's .zip or project files", icon: <Upload />, onSelect: pickSetFiles },
+  ];
+
   return (
-    <div className="min-h-full bg-bg">
-      <header className="sticky top-0 z-20 flex min-h-[52px] items-center gap-2 border-b border-line bg-panel px-4">
-        <LogoMark className="size-6 shrink-0 text-ink" />
-        <span className="text-[14px] font-semibold tracking-tight">{APP_NAME}</span>
-        <div className="ml-auto flex items-center gap-1">
-          <ThemeButton />
-          <Button variant="ghost" className="ml-1" onClick={pickSetFiles} title="Make a set from an exported set's .zip or from project files">
-            <Upload />
-            Import
-          </Button>
-          <Button variant="dark" className="ml-1" onClick={() => openDialog('new-set')}>
-            <Plus />
-            New set
-          </Button>
+    <>
+      <ContextMenu items={pageItems}>
+        <div className="min-h-full bg-bg">
+          <header className="sticky top-0 z-20 flex min-h-[52px] items-center gap-2 border-b border-line bg-panel px-4">
+            <LogoMark className="size-6 shrink-0 text-ink" />
+            <span className="text-[14px] font-semibold tracking-tight">{APP_NAME}</span>
+            <div className="ml-auto flex items-center gap-1">
+              <ThemeButton />
+              <Button variant="ghost" className="ml-1" onClick={pickSetFiles} title="Make a set from an exported set's .zip or from project files">
+                <Upload />
+                Import
+              </Button>
+              <Button variant="dark" className="ml-1" onClick={() => openDialog('new-set')}>
+                <Plus />
+                New set
+              </Button>
+            </div>
+          </header>
+          <main className="mx-auto w-full max-w-[1120px] px-4 pb-16 pt-8 sm:px-6">
+            <h1 className="text-[22px] font-semibold tracking-tight">Sound sets</h1>
+            <p className="mt-1 max-w-[640px] text-[13.5px] text-muted">
+              A set is the sound system for one product: a sound for each interaction, made to fit together. Open a set to change its sounds. Click a sound's name to hear it.
+            </p>
+            <ul className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-label="Your sound sets">
+              <li>
+                <button
+                  type="button"
+                  onClick={() => openDialog('new-set')}
+                  className="flex h-full min-h-[164px] w-full flex-col items-start justify-between rounded-2xl border border-dashed border-line-strong p-4 text-left transition-colors hover:border-accent hover:bg-accent-soft/40"
+                >
+                  <span className="grid size-8 place-items-center rounded-lg bg-field text-muted">
+                    <Plus className="size-4" />
+                  </span>
+                  <span>
+                    <span className="block text-[15px] font-semibold tracking-tight">New set</span>
+                    <span className="block text-[12px] text-muted">Start with the sounds most products need, or with one blank sound.</span>
+                  </span>
+                </button>
+              </li>
+              {sets.map((set) => (
+                <li key={set.id}>
+                  <SetCard set={set} />
+                </li>
+              ))}
+            </ul>
+            <KitsSection />
+          </main>
         </div>
-      </header>
-      <main className="mx-auto w-full max-w-[1120px] px-4 pb-16 pt-8 sm:px-6">
-        <h1 className="text-[22px] font-semibold tracking-tight">Sound sets</h1>
-        <p className="mt-1 max-w-[640px] text-[13.5px] text-muted">
-          A set is the sound system for one product: a sound for each interaction, made to fit together. Open a set to change its sounds. Click a sound's name to hear it.
-        </p>
-        <ul className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-label="Your sound sets">
-          <li>
-            <button
-              type="button"
-              onClick={() => openDialog('new-set')}
-              className="flex h-full min-h-[164px] w-full flex-col items-start justify-between rounded-2xl border border-dashed border-line-strong p-4 text-left transition-colors hover:border-accent hover:bg-accent-soft/40"
-            >
-              <span className="grid size-8 place-items-center rounded-lg bg-field text-muted">
-                <Plus className="size-4" />
-              </span>
-              <span>
-                <span className="block text-[15px] font-semibold tracking-tight">New set</span>
-                <span className="block text-[12px] text-muted">Start with the sounds most products need, or with one blank sound.</span>
-              </span>
-            </button>
-          </li>
-          {sets.map((set) => (
-            <li key={set.id}>
-              <SetCard set={set} />
-            </li>
-          ))}
-        </ul>
-        <KitsSection />
-      </main>
+      </ContextMenu>
       <NewSetDialog />
       <DeleteSetDialog />
-    </div>
+    </>
   );
 }

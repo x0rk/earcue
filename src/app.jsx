@@ -24,7 +24,7 @@ import {
   useStore,
 } from './store.js';
 import { Home } from './components/home.jsx';
-import { Button } from './components/ui.jsx';
+import { Button, quietContextMenus } from './components/ui.jsx';
 import { PreviewPane, SPLIT_MIN_WINDOW, usePreviewMode, usePreviewWidth } from './components/preview.jsx';
 import { TopBar } from './components/top-bar.jsx';
 import { Sidebar, focusSelectedRow } from './components/sidebar.jsx';
@@ -229,6 +229,7 @@ export function App() {
   useEffect(() => {
     loadStoredSamples();
   }, []);
+  useEffect(() => quietContextMenus(), []);
 
   return (
     <Tooltip.Provider delayDuration={400} skipDelayDuration={150}>
