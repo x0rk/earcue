@@ -34,7 +34,7 @@ Vite, React, Radix primitives (`radix-ui`), Tailwind CSS v4, zustand with immer,
 - `src/engine/fft.js` is the FFT shared by the spectrum and clean up.
 - Effects (`buildEffect` in `engine.js`) use only the browser's own nodes, so exported code needs no libraries. Never use `DynamicsCompressorNode` or anything else with lookahead: its 6 ms delay makes a UI sound land late. The layer compressor drives a gain from a level detector, and the Output limiter is a soft clipper set against the sound's own peak, which `renderPatch` measures in a first pass and exports carry as `limitRef`.
 - `src/store.js` is the app state: the sound sets, the open set, selection, preferences, undo and redo, and persistence to localStorage. Each set is saved under its own key, `earcue:set:<id>:v1`, and the URL (`?set=<id>`) says which set is open.
-- `src/playback.js` schedules offline renders and plays results in real time.
+- `src/playback.js` schedules offline renders and plays results in real time. What the editor plays is tracked, so moving to another sound, set or page stops it (`stopPlayback`); the preview's interaction sounds pass `editor: false` and ring on.
 - `src/components/ui.jsx` holds the design-system primitives built on Radix: `Scrub` (the slider field), `Segmented`, `SwitchRow`, `Section`, `Select`, `Menu`, `Dialog`, `Tip` and `Button`.
 - `src/components/` holds the screens: the home page with its sets (`home.jsx`), and the editor's top bar, sidebar, timeline, inspector, bottom panel and dialogs.
 - `src/components/preview.jsx` is the preview pane, beside the editor or full screen, and `kit.jsx` is its UI kit. The kit adapts shadcn/ui (MIT, notice in `licenses/`) and uses only the `kit-*` tokens in `src/styles.css`, so it looks like a shadcn app in both themes and never picks up the editor's colors. Every kit control calls `play(role)` with the interaction it stands for.
@@ -44,6 +44,8 @@ Vite, React, Radix primitives (`radix-ui`), Tailwind CSS v4, zustand with immer,
 - Write UI copy for someone who has never used audio software. Name a control by what it does ("Fade in"), and put the audio term in its hint ("Audio people call this attack").
 - Give every control a `hint`. The help strip at the bottom of the inspector shows it on hover and focus.
 - Use the primitives in `ui.jsx`, not native inputs, so every control looks and behaves the same.
+- Give anything people act on a right-click menu with `ContextMenu` from `ui.jsx`, built from the same items as its ⋯ menu so the two never drift apart. Elsewhere right-click shows nothing, except in text fields, links and `data-selectable` text, which keep the browser's menu.
+- Scrollbars are styled once in `src/styles.css` from the `--scroll-thumb` tokens. Keep thumbs at 3:1 contrast on every surface in both themes.
 - Take colors from the tokens in `src/styles.css`, and check both the light and dark themes. Dark-theme grays are neutral (equal red, green and blue); only the accent family is blue.
 - The app should feel native, not like a web page. Interface text isn't selectable and the pointer stays an arrow; mark text people may copy, like the code view, with `data-selectable`. Cmd+A selects only inside a field or a `data-selectable` region, and Cmd+S saves.
 - Change sound data through `edit`, `editLayer`, `editSound` or `editMaster` in `store.js`. During a drag, pass `false` to skip the history entry, then call `commit()` when the drag ends, so one gesture is one undo step.
