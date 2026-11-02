@@ -1,0 +1,5091 @@
+{
+ "format": "earcue-kits/1",
+ "kits": [
+  {
+   "id": "kenney-ui-audio",
+   "name": "Kenney UI Audio",
+   "by": "Kenney",
+   "about": "Clicks, rollovers and 38 switches. Short and dry, made for game and app menus.",
+   "license": "CC0 1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "source": "https://kenney.nl/assets/ui-audio",
+   "credit": "UI Audio by Kenney (kenney.nl), CC0 1.0.",
+   "shareAlike": false,
+   "sounds": [
+    {
+     "file": "click1.ogg",
+     "name": "Click 1",
+     "role": "tap"
+    },
+    {
+     "file": "click2.ogg",
+     "name": "Click 2",
+     "role": "tap"
+    },
+    {
+     "file": "click3.ogg",
+     "name": "Click 3",
+     "role": "tap"
+    },
+    {
+     "file": "click4.ogg",
+     "name": "Click 4",
+     "role": "tap"
+    },
+    {
+     "file": "click5.ogg",
+     "name": "Click 5",
+     "role": "tap"
+    },
+    {
+     "file": "mouseclick1.ogg",
+     "name": "Mouseclick 1",
+     "role": "select"
+    },
+    {
+     "file": "mouserelease1.ogg",
+     "name": "Mouserelease 1"
+    },
+    {
+     "file": "rollover1.ogg",
+     "name": "Rollover 1",
+     "role": "hover"
+    },
+    {
+     "file": "rollover2.ogg",
+     "name": "Rollover 2",
+     "role": "hover"
+    },
+    {
+     "file": "rollover3.ogg",
+     "name": "Rollover 3",
+     "role": "hover"
+    },
+    {
+     "file": "rollover4.ogg",
+     "name": "Rollover 4",
+     "role": "hover"
+    },
+    {
+     "file": "rollover5.ogg",
+     "name": "Rollover 5",
+     "role": "hover"
+    },
+    {
+     "file": "rollover6.ogg",
+     "name": "Rollover 6",
+     "role": "hover"
+    },
+    {
+     "file": "switch1.ogg",
+     "name": "Switch 1",
+     "role": "toggle-on"
+    },
+    {
+     "file": "switch2.ogg",
+     "name": "Switch 2",
+     "role": "toggle-off"
+    },
+    {
+     "file": "switch3.ogg",
+     "name": "Switch 3"
+    },
+    {
+     "file": "switch4.ogg",
+     "name": "Switch 4"
+    },
+    {
+     "file": "switch5.ogg",
+     "name": "Switch 5"
+    },
+    {
+     "file": "switch6.ogg",
+     "name": "Switch 6"
+    },
+    {
+     "file": "switch7.ogg",
+     "name": "Switch 7"
+    },
+    {
+     "file": "switch8.ogg",
+     "name": "Switch 8"
+    },
+    {
+     "file": "switch9.ogg",
+     "name": "Switch 9"
+    },
+    {
+     "file": "switch10.ogg",
+     "name": "Switch 10"
+    },
+    {
+     "file": "switch11.ogg",
+     "name": "Switch 11"
+    },
+    {
+     "file": "switch12.ogg",
+     "name": "Switch 12"
+    },
+    {
+     "file": "switch13.ogg",
+     "name": "Switch 13"
+    },
+    {
+     "file": "switch14.ogg",
+     "name": "Switch 14"
+    },
+    {
+     "file": "switch15.ogg",
+     "name": "Switch 15"
+    },
+    {
+     "file": "switch16.ogg",
+     "name": "Switch 16"
+    },
+    {
+     "file": "switch17.ogg",
+     "name": "Switch 17"
+    },
+    {
+     "file": "switch18.ogg",
+     "name": "Switch 18"
+    },
+    {
+     "file": "switch19.ogg",
+     "name": "Switch 19"
+    },
+    {
+     "file": "switch20.ogg",
+     "name": "Switch 20"
+    },
+    {
+     "file": "switch21.ogg",
+     "name": "Switch 21"
+    },
+    {
+     "file": "switch22.ogg",
+     "name": "Switch 22"
+    },
+    {
+     "file": "switch23.ogg",
+     "name": "Switch 23"
+    },
+    {
+     "file": "switch24.ogg",
+     "name": "Switch 24"
+    },
+    {
+     "file": "switch25.ogg",
+     "name": "Switch 25"
+    },
+    {
+     "file": "switch26.ogg",
+     "name": "Switch 26"
+    },
+    {
+     "file": "switch27.ogg",
+     "name": "Switch 27"
+    },
+    {
+     "file": "switch28.ogg",
+     "name": "Switch 28"
+    },
+    {
+     "file": "switch29.ogg",
+     "name": "Switch 29"
+    },
+    {
+     "file": "switch30.ogg",
+     "name": "Switch 30"
+    },
+    {
+     "file": "switch31.ogg",
+     "name": "Switch 31"
+    },
+    {
+     "file": "switch32.ogg",
+     "name": "Switch 32"
+    },
+    {
+     "file": "switch33.ogg",
+     "name": "Switch 33"
+    },
+    {
+     "file": "switch34.ogg",
+     "name": "Switch 34"
+    },
+    {
+     "file": "switch35.ogg",
+     "name": "Switch 35"
+    },
+    {
+     "file": "switch36.ogg",
+     "name": "Switch 36"
+    },
+    {
+     "file": "switch37.ogg",
+     "name": "Switch 37"
+    },
+    {
+     "file": "switch38.ogg",
+     "name": "Switch 38"
+    }
+   ]
+  },
+  {
+   "id": "kenney-interface",
+   "name": "Kenney Interface Sounds",
+   "by": "Kenney",
+   "about": "A hundred interface sounds with several takes of each: clicks, selects, errors, open and close.",
+   "license": "CC0 1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "source": "https://kenney.nl/assets/interface-sounds",
+   "credit": "Interface Sounds by Kenney (kenney.nl), CC0 1.0.",
+   "shareAlike": false,
+   "sounds": [
+    {
+     "file": "back_001.ogg",
+     "name": "Back 1",
+     "role": "back"
+    },
+    {
+     "file": "back_002.ogg",
+     "name": "Back 2",
+     "role": "back"
+    },
+    {
+     "file": "back_003.ogg",
+     "name": "Back 3",
+     "role": "back"
+    },
+    {
+     "file": "back_004.ogg",
+     "name": "Back 4",
+     "role": "back"
+    },
+    {
+     "file": "bong_001.ogg",
+     "name": "Bong 1",
+     "role": "notification"
+    },
+    {
+     "file": "click_001.ogg",
+     "name": "Click 1",
+     "role": "tap"
+    },
+    {
+     "file": "click_002.ogg",
+     "name": "Click 2",
+     "role": "tap"
+    },
+    {
+     "file": "click_003.ogg",
+     "name": "Click 3",
+     "role": "tap"
+    },
+    {
+     "file": "click_004.ogg",
+     "name": "Click 4",
+     "role": "tap"
+    },
+    {
+     "file": "click_005.ogg",
+     "name": "Click 5",
+     "role": "tap"
+    },
+    {
+     "file": "close_001.ogg",
+     "name": "Close 1",
+     "role": "close"
+    },
+    {
+     "file": "close_002.ogg",
+     "name": "Close 2",
+     "role": "close"
+    },
+    {
+     "file": "close_003.ogg",
+     "name": "Close 3",
+     "role": "close"
+    },
+    {
+     "file": "close_004.ogg",
+     "name": "Close 4",
+     "role": "close"
+    },
+    {
+     "file": "confirmation_001.ogg",
+     "name": "Confirmation 1",
+     "role": "success"
+    },
+    {
+     "file": "confirmation_002.ogg",
+     "name": "Confirmation 2",
+     "role": "success"
+    },
+    {
+     "file": "confirmation_003.ogg",
+     "name": "Confirmation 3",
+     "role": "success"
+    },
+    {
+     "file": "confirmation_004.ogg",
+     "name": "Confirmation 4",
+     "role": "success"
+    },
+    {
+     "file": "drop_001.ogg",
+     "name": "Drop 1"
+    },
+    {
+     "file": "drop_002.ogg",
+     "name": "Drop 2"
+    },
+    {
+     "file": "drop_003.ogg",
+     "name": "Drop 3"
+    },
+    {
+     "file": "drop_004.ogg",
+     "name": "Drop 4"
+    },
+    {
+     "file": "error_001.ogg",
+     "name": "Error 1",
+     "role": "error"
+    },
+    {
+     "file": "error_002.ogg",
+     "name": "Error 2",
+     "role": "error"
+    },
+    {
+     "file": "error_003.ogg",
+     "name": "Error 3",
+     "role": "error"
+    },
+    {
+     "file": "error_004.ogg",
+     "name": "Error 4",
+     "role": "error"
+    },
+    {
+     "file": "error_005.ogg",
+     "name": "Error 5",
+     "role": "error"
+    },
+    {
+     "file": "error_006.ogg",
+     "name": "Error 6",
+     "role": "error"
+    },
+    {
+     "file": "error_007.ogg",
+     "name": "Error 7",
+     "role": "error"
+    },
+    {
+     "file": "error_008.ogg",
+     "name": "Error 8",
+     "role": "error"
+    },
+    {
+     "file": "glass_001.ogg",
+     "name": "Glass 1"
+    },
+    {
+     "file": "glass_002.ogg",
+     "name": "Glass 2"
+    },
+    {
+     "file": "glass_003.ogg",
+     "name": "Glass 3"
+    },
+    {
+     "file": "glass_004.ogg",
+     "name": "Glass 4"
+    },
+    {
+     "file": "glass_005.ogg",
+     "name": "Glass 5"
+    },
+    {
+     "file": "glass_006.ogg",
+     "name": "Glass 6"
+    },
+    {
+     "file": "glitch_001.ogg",
+     "name": "Glitch 1"
+    },
+    {
+     "file": "glitch_002.ogg",
+     "name": "Glitch 2"
+    },
+    {
+     "file": "glitch_003.ogg",
+     "name": "Glitch 3"
+    },
+    {
+     "file": "glitch_004.ogg",
+     "name": "Glitch 4"
+    },
+    {
+     "file": "maximize_001.ogg",
+     "name": "Maximize 1"
+    },
+    {
+     "file": "maximize_002.ogg",
+     "name": "Maximize 2"
+    },
+    {
+     "file": "maximize_003.ogg",
+     "name": "Maximize 3"
+    },
+    {
+     "file": "maximize_004.ogg",
+     "name": "Maximize 4"
+    },
+    {
+     "file": "maximize_005.ogg",
+     "name": "Maximize 5"
+    },
+    {
+     "file": "maximize_006.ogg",
+     "name": "Maximize 6"
+    },
+    {
+     "file": "maximize_007.ogg",
+     "name": "Maximize 7"
+    },
+    {
+     "file": "maximize_008.ogg",
+     "name": "Maximize 8"
+    },
+    {
+     "file": "maximize_009.ogg",
+     "name": "Maximize 9"
+    },
+    {
+     "file": "minimize_001.ogg",
+     "name": "Minimize 1"
+    },
+    {
+     "file": "minimize_002.ogg",
+     "name": "Minimize 2"
+    },
+    {
+     "file": "minimize_003.ogg",
+     "name": "Minimize 3"
+    },
+    {
+     "file": "minimize_004.ogg",
+     "name": "Minimize 4"
+    },
+    {
+     "file": "minimize_005.ogg",
+     "name": "Minimize 5"
+    },
+    {
+     "file": "minimize_006.ogg",
+     "name": "Minimize 6"
+    },
+    {
+     "file": "minimize_007.ogg",
+     "name": "Minimize 7"
+    },
+    {
+     "file": "minimize_008.ogg",
+     "name": "Minimize 8"
+    },
+    {
+     "file": "minimize_009.ogg",
+     "name": "Minimize 9"
+    },
+    {
+     "file": "open_001.ogg",
+     "name": "Open 1",
+     "role": "open"
+    },
+    {
+     "file": "open_002.ogg",
+     "name": "Open 2",
+     "role": "open"
+    },
+    {
+     "file": "open_003.ogg",
+     "name": "Open 3",
+     "role": "open"
+    },
+    {
+     "file": "open_004.ogg",
+     "name": "Open 4",
+     "role": "open"
+    },
+    {
+     "file": "pluck_001.ogg",
+     "name": "Pluck 1"
+    },
+    {
+     "file": "pluck_002.ogg",
+     "name": "Pluck 2"
+    },
+    {
+     "file": "question_001.ogg",
+     "name": "Question 1"
+    },
+    {
+     "file": "question_002.ogg",
+     "name": "Question 2"
+    },
+    {
+     "file": "question_003.ogg",
+     "name": "Question 3"
+    },
+    {
+     "file": "question_004.ogg",
+     "name": "Question 4"
+    },
+    {
+     "file": "scratch_001.ogg",
+     "name": "Scratch 1"
+    },
+    {
+     "file": "scratch_002.ogg",
+     "name": "Scratch 2"
+    },
+    {
+     "file": "scratch_003.ogg",
+     "name": "Scratch 3"
+    },
+    {
+     "file": "scratch_004.ogg",
+     "name": "Scratch 4"
+    },
+    {
+     "file": "scratch_005.ogg",
+     "name": "Scratch 5"
+    },
+    {
+     "file": "scroll_001.ogg",
+     "name": "Scroll 1",
+     "role": "swipe"
+    },
+    {
+     "file": "scroll_002.ogg",
+     "name": "Scroll 2",
+     "role": "swipe"
+    },
+    {
+     "file": "scroll_003.ogg",
+     "name": "Scroll 3",
+     "role": "swipe"
+    },
+    {
+     "file": "scroll_004.ogg",
+     "name": "Scroll 4",
+     "role": "swipe"
+    },
+    {
+     "file": "scroll_005.ogg",
+     "name": "Scroll 5",
+     "role": "swipe"
+    },
+    {
+     "file": "select_001.ogg",
+     "name": "Select 1",
+     "role": "select"
+    },
+    {
+     "file": "select_002.ogg",
+     "name": "Select 2",
+     "role": "select"
+    },
+    {
+     "file": "select_003.ogg",
+     "name": "Select 3",
+     "role": "select"
+    },
+    {
+     "file": "select_004.ogg",
+     "name": "Select 4",
+     "role": "select"
+    },
+    {
+     "file": "select_005.ogg",
+     "name": "Select 5",
+     "role": "select"
+    },
+    {
+     "file": "select_006.ogg",
+     "name": "Select 6",
+     "role": "select"
+    },
+    {
+     "file": "select_007.ogg",
+     "name": "Select 7",
+     "role": "select"
+    },
+    {
+     "file": "select_008.ogg",
+     "name": "Select 8",
+     "role": "select"
+    },
+    {
+     "file": "switch_001.ogg",
+     "name": "Switch 1"
+    },
+    {
+     "file": "switch_002.ogg",
+     "name": "Switch 2"
+    },
+    {
+     "file": "switch_003.ogg",
+     "name": "Switch 3"
+    },
+    {
+     "file": "switch_004.ogg",
+     "name": "Switch 4"
+    },
+    {
+     "file": "switch_005.ogg",
+     "name": "Switch 5"
+    },
+    {
+     "file": "switch_006.ogg",
+     "name": "Switch 6"
+    },
+    {
+     "file": "switch_007.ogg",
+     "name": "Switch 7"
+    },
+    {
+     "file": "tick_001.ogg",
+     "name": "Tick 1",
+     "role": "focus"
+    },
+    {
+     "file": "tick_002.ogg",
+     "name": "Tick 2",
+     "role": "focus"
+    },
+    {
+     "file": "tick_004.ogg",
+     "name": "Tick 4",
+     "role": "focus"
+    },
+    {
+     "file": "toggle_001.ogg",
+     "name": "Toggle 1",
+     "role": "toggle-on"
+    },
+    {
+     "file": "toggle_002.ogg",
+     "name": "Toggle 2",
+     "role": "toggle-off"
+    },
+    {
+     "file": "toggle_003.ogg",
+     "name": "Toggle 3",
+     "role": "toggle-on"
+    },
+    {
+     "file": "toggle_004.ogg",
+     "name": "Toggle 4",
+     "role": "toggle-off"
+    }
+   ]
+  },
+  {
+   "id": "material",
+   "name": "Material",
+   "by": "Google",
+   "about": "Google's product sounds for Material Design: hero moments, alerts and the primary system sounds.",
+   "license": "CC BY 4.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+   "source": "https://web.archive.org/web/20190717142129/https://material.io/design/sound/sound-resources.html",
+   "credit": "Material Design product sounds by Google, CC BY 4.0.",
+   "shareAlike": false,
+   "sounds": [
+    {
+     "file": "alarm_gentle.ogg",
+     "name": "Alarm gentle",
+     "role": "alarm"
+    },
+    {
+     "file": "alert_error-01.ogg",
+     "name": "Alert error 1",
+     "role": "error"
+    },
+    {
+     "file": "alert_error-02.ogg",
+     "name": "Alert error 2",
+     "role": "error"
+    },
+    {
+     "file": "alert_error-03.ogg",
+     "name": "Alert error 3",
+     "role": "error"
+    },
+    {
+     "file": "alert_high-intensity.ogg",
+     "name": "Alert high intensity",
+     "role": "urgent"
+    },
+    {
+     "file": "alert_simple.ogg",
+     "name": "Alert simple",
+     "role": "warning"
+    },
+    {
+     "file": "hero_decorative-celebration-01.ogg",
+     "name": "Decorative celebration 1",
+     "role": "celebrate"
+    },
+    {
+     "file": "hero_decorative-celebration-02.ogg",
+     "name": "Decorative celebration 2",
+     "role": "celebrate"
+    },
+    {
+     "file": "hero_decorative-celebration-03.ogg",
+     "name": "Decorative celebration 3",
+     "role": "celebrate"
+    },
+    {
+     "file": "hero_simple-celebration-01.ogg",
+     "name": "Simple celebration 1",
+     "role": "celebrate"
+    },
+    {
+     "file": "hero_simple-celebration-02.ogg",
+     "name": "Simple celebration 2",
+     "role": "celebrate"
+    },
+    {
+     "file": "hero_simple-celebration-03.ogg",
+     "name": "Simple celebration 3",
+     "role": "celebrate"
+    },
+    {
+     "file": "navigation-cancel.ogg",
+     "name": "Cancel",
+     "role": "cancel"
+    },
+    {
+     "file": "navigation_backward-selection.ogg",
+     "name": "Backward selection",
+     "role": "back"
+    },
+    {
+     "file": "navigation_backward-selection-minimal.ogg",
+     "name": "Backward selection minimal",
+     "role": "back"
+    },
+    {
+     "file": "navigation_forward-selection.ogg",
+     "name": "Forward selection"
+    },
+    {
+     "file": "navigation_forward-selection-minimal.ogg",
+     "name": "Forward selection minimal"
+    },
+    {
+     "file": "navigation_hover-tap.ogg",
+     "name": "Hover tap",
+     "role": "hover"
+    },
+    {
+     "file": "navigation_selection-complete-celebration.ogg",
+     "name": "Selection complete celebration",
+     "role": "complete"
+    },
+    {
+     "file": "navigation_transition-left.ogg",
+     "name": "Transition left",
+     "role": "swipe"
+    },
+    {
+     "file": "navigation_transition-right.ogg",
+     "name": "Transition right",
+     "role": "swipe"
+    },
+    {
+     "file": "navigation_unavailable-selection.ogg",
+     "name": "Unavailable selection"
+    },
+    {
+     "file": "notification_ambient.ogg",
+     "name": "Notification ambient",
+     "role": "notification"
+    },
+    {
+     "file": "notification_decorative-01.ogg",
+     "name": "Notification decorative 1",
+     "role": "notification"
+    },
+    {
+     "file": "notification_decorative-02.ogg",
+     "name": "Notification decorative 2",
+     "role": "notification"
+    },
+    {
+     "file": "notification_high-intensity.ogg",
+     "name": "Notification high intensity",
+     "role": "urgent"
+    },
+    {
+     "file": "notification_simple-01.ogg",
+     "name": "Notification simple 1",
+     "role": "notification"
+    },
+    {
+     "file": "notification_simple-02.ogg",
+     "name": "Notification simple 2",
+     "role": "notification"
+    },
+    {
+     "file": "ringtone_minimal.ogg",
+     "name": "Ringtone minimal",
+     "role": "ring"
+    },
+    {
+     "file": "state-change_confirm-down.ogg",
+     "name": "Confirm down",
+     "role": "toggle-off"
+    },
+    {
+     "file": "state-change_confirm-up.ogg",
+     "name": "Confirm up",
+     "role": "toggle-on"
+    },
+    {
+     "file": "ui_camera-shutter.ogg",
+     "name": "Camera shutter",
+     "role": "capture"
+    },
+    {
+     "file": "ui_loading.ogg",
+     "name": "Loading"
+    },
+    {
+     "file": "ui_lock.ogg",
+     "name": "Lock",
+     "role": "lock"
+    },
+    {
+     "file": "ui_refresh-feed.ogg",
+     "name": "Refresh feed"
+    },
+    {
+     "file": "ui_tap-variant-01.ogg",
+     "name": "Tap variant 1",
+     "role": "tap"
+    },
+    {
+     "file": "ui_tap-variant-02.ogg",
+     "name": "Tap variant 2",
+     "role": "tap"
+    },
+    {
+     "file": "ui_tap-variant-03.ogg",
+     "name": "Tap variant 3",
+     "role": "tap"
+    },
+    {
+     "file": "ui_tap-variant-04.ogg",
+     "name": "Tap variant 4",
+     "role": "tap"
+    },
+    {
+     "file": "ui_unlock.ogg",
+     "name": "Unlock",
+     "role": "unlock"
+    }
+   ]
+  },
+  {
+   "id": "android",
+   "name": "Android",
+   "by": "The Android Open Source Project",
+   "about": "The touch, keyboard, lock and camera sounds from the Android Open Source Project.",
+   "license": "Apache 2.0",
+   "licenseUrl": "https://www.apache.org/licenses/LICENSE-2.0",
+   "source": "https://android.googlesource.com/platform/frameworks/base/+/refs/heads/main/data/sounds/effects/ogg/",
+   "credit": "Android UI sound effects, Copyright The Android Open Source Project, Apache 2.0.",
+   "shareAlike": false,
+   "sounds": [
+    {
+     "file": "camera_click.ogg",
+     "name": "Camera click",
+     "role": "capture"
+    },
+    {
+     "file": "camera_focus.ogg",
+     "name": "Camera focus"
+    },
+    {
+     "file": "ChargingStarted.ogg",
+     "name": "Charging started"
+    },
+    {
+     "file": "Dock.ogg",
+     "name": "Dock",
+     "role": "connect"
+    },
+    {
+     "file": "Effect_Tick.ogg",
+     "name": "Effect tick",
+     "role": "tap"
+    },
+    {
+     "file": "InCallNotification.ogg",
+     "name": "In call notification"
+    },
+    {
+     "file": "KeypressDelete.ogg",
+     "name": "Keypress delete",
+     "role": "typing"
+    },
+    {
+     "file": "KeypressInvalid.ogg",
+     "name": "Keypress invalid"
+    },
+    {
+     "file": "KeypressReturn.ogg",
+     "name": "Keypress return",
+     "role": "typing"
+    },
+    {
+     "file": "KeypressSpacebar.ogg",
+     "name": "Keypress spacebar",
+     "role": "typing"
+    },
+    {
+     "file": "KeypressStandard.ogg",
+     "name": "Keypress standard",
+     "role": "typing"
+    },
+    {
+     "file": "Lock.ogg",
+     "name": "Lock",
+     "role": "lock"
+    },
+    {
+     "file": "LowBattery.ogg",
+     "name": "Low battery",
+     "role": "warning"
+    },
+    {
+     "file": "Media_Volume.ogg",
+     "name": "Media volume"
+    },
+    {
+     "file": "NFCFailure.ogg",
+     "name": "NFC failure",
+     "role": "error"
+    },
+    {
+     "file": "NFCInitiated.ogg",
+     "name": "NFC initiated"
+    },
+    {
+     "file": "NFCSuccess.ogg",
+     "name": "NFC success",
+     "role": "success"
+    },
+    {
+     "file": "NFCTransferComplete.ogg",
+     "name": "NFC transfer complete",
+     "role": "complete"
+    },
+    {
+     "file": "NFCTransferInitiated.ogg",
+     "name": "NFC transfer initiated"
+    },
+    {
+     "file": "Trusted.ogg",
+     "name": "Trusted"
+    },
+    {
+     "file": "Undock.ogg",
+     "name": "Undock",
+     "role": "disconnect"
+    },
+    {
+     "file": "Unlock.ogg",
+     "name": "Unlock",
+     "role": "unlock"
+    },
+    {
+     "file": "VideoRecord.ogg",
+     "name": "Video record"
+    },
+    {
+     "file": "VideoStop.ogg",
+     "name": "Video stop"
+    },
+    {
+     "file": "VolumeIncremental.ogg",
+     "name": "Volume incremental"
+    },
+    {
+     "file": "WirelessChargingStarted.ogg",
+     "name": "Wireless charging started"
+    }
+   ]
+  },
+  {
+   "id": "kde-ocean",
+   "name": "KDE Ocean",
+   "by": "Guilherme Marçal Silva for KDE",
+   "about": "The sound theme of KDE Plasma 6: warm, rounded desktop sounds. Sounds made from these stay CC BY-SA.",
+   "license": "CC BY-SA 4.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+   "source": "https://invent.kde.org/plasma/ocean-sound-theme",
+   "credit": "Ocean Sound Theme by Guilherme Marçal Silva for KDE Plasma, CC BY-SA 4.0.",
+   "shareAlike": true,
+   "sounds": [
+    {
+     "file": "alarm-clock-elapsed.oga",
+     "name": "Alarm clock elapsed",
+     "role": "alarm"
+    },
+    {
+     "file": "audio-volume-change.oga",
+     "name": "Audio volume change"
+    },
+    {
+     "file": "battery-caution.oga",
+     "name": "Battery caution",
+     "role": "warning"
+    },
+    {
+     "file": "battery-low.oga",
+     "name": "Battery low",
+     "role": "warning"
+    },
+    {
+     "file": "bell-window-system.oga",
+     "name": "Bell window system",
+     "role": "notification"
+    },
+    {
+     "file": "button-pressed.oga",
+     "name": "Button pressed",
+     "role": "tap"
+    },
+    {
+     "file": "button-pressed-modifier.oga",
+     "name": "Button pressed modifier",
+     "role": "tap"
+    },
+    {
+     "file": "completion-fail.oga",
+     "name": "Completion fail",
+     "role": "error"
+    },
+    {
+     "file": "completion-partial.oga",
+     "name": "Completion partial"
+    },
+    {
+     "file": "completion-rotation.oga",
+     "name": "Completion rotation"
+    },
+    {
+     "file": "completion-success.oga",
+     "name": "Completion success",
+     "role": "complete"
+    },
+    {
+     "file": "desktop-login.oga",
+     "name": "Desktop login"
+    },
+    {
+     "file": "desktop-logout.oga",
+     "name": "Desktop logout"
+    },
+    {
+     "file": "device-added.oga",
+     "name": "Device added",
+     "role": "connect"
+    },
+    {
+     "file": "device-removed.oga",
+     "name": "Device removed",
+     "role": "disconnect"
+    },
+    {
+     "file": "dialog-error.oga",
+     "name": "Dialog error",
+     "role": "error"
+    },
+    {
+     "file": "dialog-error-serious.oga",
+     "name": "Dialog error serious",
+     "role": "urgent"
+    },
+    {
+     "file": "dialog-information.oga",
+     "name": "Dialog information",
+     "role": "notification"
+    },
+    {
+     "file": "dialog-question.oga",
+     "name": "Dialog question"
+    },
+    {
+     "file": "dialog-warning.oga",
+     "name": "Dialog warning",
+     "role": "warning"
+    },
+    {
+     "file": "dialog-warning-auth.oga",
+     "name": "Dialog warning auth"
+    },
+    {
+     "file": "message-new-email.oga",
+     "name": "Message new email",
+     "role": "notification"
+    },
+    {
+     "file": "message-new-instant.oga",
+     "name": "Message new instant",
+     "role": "receive"
+    },
+    {
+     "file": "outcome-failure.oga",
+     "name": "Outcome failure",
+     "role": "error"
+    },
+    {
+     "file": "outcome-success.oga",
+     "name": "Outcome success",
+     "role": "success"
+    },
+    {
+     "file": "phone-incoming-call.oga",
+     "name": "Phone incoming call",
+     "role": "ring"
+    },
+    {
+     "file": "power-plug.oga",
+     "name": "Power plug",
+     "role": "connect"
+    },
+    {
+     "file": "power-unplug.oga",
+     "name": "Power unplug",
+     "role": "disconnect"
+    },
+    {
+     "file": "service-login.oga",
+     "name": "Service login"
+    },
+    {
+     "file": "service-logout.oga",
+     "name": "Service logout"
+    },
+    {
+     "file": "trash-empty.oga",
+     "name": "Trash empty",
+     "role": "delete"
+    }
+   ]
+  },
+  {
+   "id": "uisfx-minimal",
+   "name": "uisfx Minimal",
+   "by": "uisfx",
+   "about": "Dry, precise, almost invisible. Best for productivity, SaaS, system UI. 78 sounds made by a synthesizer.",
+   "license": "CC0 1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "source": "https://github.com/romainsimon/uisfx",
+   "credit": "uisfx Minimal pack (github.com/romainsimon/uisfx), audio CC0 1.0.",
+   "shareAlike": false,
+   "pack": "Minimal",
+   "sounds": [
+    {
+     "file": "achievement.ogg",
+     "name": "Achievement",
+     "role": "celebrate"
+    },
+    {
+     "file": "add-to-cart.ogg",
+     "name": "Add to cart"
+    },
+    {
+     "file": "back.ogg",
+     "name": "Back",
+     "role": "back"
+    },
+    {
+     "file": "badge.ogg",
+     "name": "Badge"
+    },
+    {
+     "file": "blocked.ogg",
+     "name": "Blocked"
+    },
+    {
+     "file": "bonus.ogg",
+     "name": "Bonus"
+    },
+    {
+     "file": "cancel.ogg",
+     "name": "Cancel",
+     "role": "cancel"
+    },
+    {
+     "file": "check.ogg",
+     "name": "Check",
+     "role": "select"
+    },
+    {
+     "file": "checkout.ogg",
+     "name": "Checkout"
+    },
+    {
+     "file": "checkpoint.ogg",
+     "name": "Checkpoint"
+    },
+    {
+     "file": "close.ogg",
+     "name": "Close",
+     "role": "close"
+    },
+    {
+     "file": "collapse.ogg",
+     "name": "Collapse"
+    },
+    {
+     "file": "complete.ogg",
+     "name": "Complete",
+     "role": "complete"
+    },
+    {
+     "file": "connect.ogg",
+     "name": "Connect",
+     "role": "connect"
+    },
+    {
+     "file": "connecting.ogg",
+     "name": "Connecting"
+    },
+    {
+     "file": "copy.ogg",
+     "name": "Copy"
+    },
+    {
+     "file": "coupon.ogg",
+     "name": "Coupon"
+    },
+    {
+     "file": "delete.ogg",
+     "name": "Delete",
+     "role": "delete"
+    },
+    {
+     "file": "deselect.ogg",
+     "name": "Deselect"
+    },
+    {
+     "file": "disconnect.ogg",
+     "name": "Disconnect",
+     "role": "disconnect"
+    },
+    {
+     "file": "double-click.ogg",
+     "name": "Double click"
+    },
+    {
+     "file": "drag-start.ogg",
+     "name": "Drag start"
+    },
+    {
+     "file": "drop.ogg",
+     "name": "Drop"
+    },
+    {
+     "file": "error.ogg",
+     "name": "Error",
+     "role": "error"
+    },
+    {
+     "file": "expand.ogg",
+     "name": "Expand"
+    },
+    {
+     "file": "focus.ogg",
+     "name": "Focus",
+     "role": "focus"
+    },
+    {
+     "file": "forward.ogg",
+     "name": "Forward"
+    },
+    {
+     "file": "hover.ogg",
+     "name": "Hover",
+     "role": "hover"
+    },
+    {
+     "file": "info.ogg",
+     "name": "Info"
+    },
+    {
+     "file": "invalid-drop.ogg",
+     "name": "Invalid drop"
+    },
+    {
+     "file": "level-up.ogg",
+     "name": "Level up",
+     "role": "celebrate"
+    },
+    {
+     "file": "loading.ogg",
+     "name": "Loading"
+    },
+    {
+     "file": "lock.ogg",
+     "name": "Lock",
+     "role": "lock"
+    },
+    {
+     "file": "long-press.ogg",
+     "name": "Long press"
+    },
+    {
+     "file": "mention.ogg",
+     "name": "Mention",
+     "role": "notification"
+    },
+    {
+     "file": "notification.ogg",
+     "name": "Notification",
+     "role": "notification"
+    },
+    {
+     "file": "open.ogg",
+     "name": "Open",
+     "role": "open"
+    },
+    {
+     "file": "paste.ogg",
+     "name": "Paste"
+    },
+    {
+     "file": "pause.ogg",
+     "name": "Pause"
+    },
+    {
+     "file": "play.ogg",
+     "name": "Play"
+    },
+    {
+     "file": "press.ogg",
+     "name": "Press",
+     "role": "tap"
+    },
+    {
+     "file": "processing.ogg",
+     "name": "Processing"
+    },
+    {
+     "file": "progress-step.ogg",
+     "name": "Progress step"
+    },
+    {
+     "file": "purchase.ogg",
+     "name": "Purchase"
+    },
+    {
+     "file": "queued.ogg",
+     "name": "Queued"
+    },
+    {
+     "file": "reaction.ogg",
+     "name": "Reaction"
+    },
+    {
+     "file": "receive.ogg",
+     "name": "Receive",
+     "role": "receive"
+    },
+    {
+     "file": "recording.ogg",
+     "name": "Recording"
+    },
+    {
+     "file": "redo.ogg",
+     "name": "Redo"
+    },
+    {
+     "file": "refund.ogg",
+     "name": "Refund"
+    },
+    {
+     "file": "release.ogg",
+     "name": "Release"
+    },
+    {
+     "file": "remove-from-cart.ogg",
+     "name": "Remove from cart"
+    },
+    {
+     "file": "reorder.ogg",
+     "name": "Reorder"
+    },
+    {
+     "file": "retry.ogg",
+     "name": "Retry"
+    },
+    {
+     "file": "reward.ogg",
+     "name": "Reward"
+    },
+    {
+     "file": "scanning.ogg",
+     "name": "Scanning"
+    },
+    {
+     "file": "seek.ogg",
+     "name": "Seek"
+    },
+    {
+     "file": "select.ogg",
+     "name": "Select",
+     "role": "select"
+    },
+    {
+     "file": "send.ogg",
+     "name": "Send",
+     "role": "send"
+    },
+    {
+     "file": "skip-next.ogg",
+     "name": "Skip next"
+    },
+    {
+     "file": "skip-previous.ogg",
+     "name": "Skip previous"
+    },
+    {
+     "file": "sleep.ogg",
+     "name": "Sleep"
+    },
+    {
+     "file": "snap.ogg",
+     "name": "Snap"
+    },
+    {
+     "file": "start.ogg",
+     "name": "Start"
+    },
+    {
+     "file": "stop.ogg",
+     "name": "Stop"
+    },
+    {
+     "file": "streak.ogg",
+     "name": "Streak"
+    },
+    {
+     "file": "streaming.ogg",
+     "name": "Streaming"
+    },
+    {
+     "file": "success.ogg",
+     "name": "Success",
+     "role": "success"
+    },
+    {
+     "file": "swipe.ogg",
+     "name": "Swipe",
+     "role": "swipe"
+    },
+    {
+     "file": "toggle-off.ogg",
+     "name": "Toggle off",
+     "role": "toggle-off"
+    },
+    {
+     "file": "toggle-on.ogg",
+     "name": "Toggle on",
+     "role": "toggle-on"
+    },
+    {
+     "file": "typing.ogg",
+     "name": "Typing",
+     "role": "typing"
+    },
+    {
+     "file": "uncheck.ogg",
+     "name": "Uncheck"
+    },
+    {
+     "file": "undo.ogg",
+     "name": "Undo"
+    },
+    {
+     "file": "unlock.ogg",
+     "name": "Unlock",
+     "role": "unlock"
+    },
+    {
+     "file": "volume-change.ogg",
+     "name": "Volume change"
+    },
+    {
+     "file": "wake.ogg",
+     "name": "Wake"
+    },
+    {
+     "file": "warning.ogg",
+     "name": "Warning",
+     "role": "warning"
+    }
+   ]
+  },
+  {
+   "id": "uisfx-soft",
+   "name": "uisfx Soft",
+   "by": "uisfx",
+   "about": "Rounded felt, warm and reassuring. Best for mobile, wellness, friendly SaaS. 78 sounds made by a synthesizer.",
+   "license": "CC0 1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "source": "https://github.com/romainsimon/uisfx",
+   "credit": "uisfx Soft pack (github.com/romainsimon/uisfx), audio CC0 1.0.",
+   "shareAlike": false,
+   "pack": "Soft",
+   "sounds": [
+    {
+     "file": "achievement.ogg",
+     "name": "Achievement",
+     "role": "celebrate"
+    },
+    {
+     "file": "add-to-cart.ogg",
+     "name": "Add to cart"
+    },
+    {
+     "file": "back.ogg",
+     "name": "Back",
+     "role": "back"
+    },
+    {
+     "file": "badge.ogg",
+     "name": "Badge"
+    },
+    {
+     "file": "blocked.ogg",
+     "name": "Blocked"
+    },
+    {
+     "file": "bonus.ogg",
+     "name": "Bonus"
+    },
+    {
+     "file": "cancel.ogg",
+     "name": "Cancel",
+     "role": "cancel"
+    },
+    {
+     "file": "check.ogg",
+     "name": "Check",
+     "role": "select"
+    },
+    {
+     "file": "checkout.ogg",
+     "name": "Checkout"
+    },
+    {
+     "file": "checkpoint.ogg",
+     "name": "Checkpoint"
+    },
+    {
+     "file": "close.ogg",
+     "name": "Close",
+     "role": "close"
+    },
+    {
+     "file": "collapse.ogg",
+     "name": "Collapse"
+    },
+    {
+     "file": "complete.ogg",
+     "name": "Complete",
+     "role": "complete"
+    },
+    {
+     "file": "connect.ogg",
+     "name": "Connect",
+     "role": "connect"
+    },
+    {
+     "file": "connecting.ogg",
+     "name": "Connecting"
+    },
+    {
+     "file": "copy.ogg",
+     "name": "Copy"
+    },
+    {
+     "file": "coupon.ogg",
+     "name": "Coupon"
+    },
+    {
+     "file": "delete.ogg",
+     "name": "Delete",
+     "role": "delete"
+    },
+    {
+     "file": "deselect.ogg",
+     "name": "Deselect"
+    },
+    {
+     "file": "disconnect.ogg",
+     "name": "Disconnect",
+     "role": "disconnect"
+    },
+    {
+     "file": "double-click.ogg",
+     "name": "Double click"
+    },
+    {
+     "file": "drag-start.ogg",
+     "name": "Drag start"
+    },
+    {
+     "file": "drop.ogg",
+     "name": "Drop"
+    },
+    {
+     "file": "error.ogg",
+     "name": "Error",
+     "role": "error"
+    },
+    {
+     "file": "expand.ogg",
+     "name": "Expand"
+    },
+    {
+     "file": "focus.ogg",
+     "name": "Focus",
+     "role": "focus"
+    },
+    {
+     "file": "forward.ogg",
+     "name": "Forward"
+    },
+    {
+     "file": "hover.ogg",
+     "name": "Hover",
+     "role": "hover"
+    },
+    {
+     "file": "info.ogg",
+     "name": "Info"
+    },
+    {
+     "file": "invalid-drop.ogg",
+     "name": "Invalid drop"
+    },
+    {
+     "file": "level-up.ogg",
+     "name": "Level up",
+     "role": "celebrate"
+    },
+    {
+     "file": "loading.ogg",
+     "name": "Loading"
+    },
+    {
+     "file": "lock.ogg",
+     "name": "Lock",
+     "role": "lock"
+    },
+    {
+     "file": "long-press.ogg",
+     "name": "Long press"
+    },
+    {
+     "file": "mention.ogg",
+     "name": "Mention",
+     "role": "notification"
+    },
+    {
+     "file": "notification.ogg",
+     "name": "Notification",
+     "role": "notification"
+    },
+    {
+     "file": "open.ogg",
+     "name": "Open",
+     "role": "open"
+    },
+    {
+     "file": "paste.ogg",
+     "name": "Paste"
+    },
+    {
+     "file": "pause.ogg",
+     "name": "Pause"
+    },
+    {
+     "file": "play.ogg",
+     "name": "Play"
+    },
+    {
+     "file": "press.ogg",
+     "name": "Press",
+     "role": "tap"
+    },
+    {
+     "file": "processing.ogg",
+     "name": "Processing"
+    },
+    {
+     "file": "progress-step.ogg",
+     "name": "Progress step"
+    },
+    {
+     "file": "purchase.ogg",
+     "name": "Purchase"
+    },
+    {
+     "file": "queued.ogg",
+     "name": "Queued"
+    },
+    {
+     "file": "reaction.ogg",
+     "name": "Reaction"
+    },
+    {
+     "file": "receive.ogg",
+     "name": "Receive",
+     "role": "receive"
+    },
+    {
+     "file": "recording.ogg",
+     "name": "Recording"
+    },
+    {
+     "file": "redo.ogg",
+     "name": "Redo"
+    },
+    {
+     "file": "refund.ogg",
+     "name": "Refund"
+    },
+    {
+     "file": "release.ogg",
+     "name": "Release"
+    },
+    {
+     "file": "remove-from-cart.ogg",
+     "name": "Remove from cart"
+    },
+    {
+     "file": "reorder.ogg",
+     "name": "Reorder"
+    },
+    {
+     "file": "retry.ogg",
+     "name": "Retry"
+    },
+    {
+     "file": "reward.ogg",
+     "name": "Reward"
+    },
+    {
+     "file": "scanning.ogg",
+     "name": "Scanning"
+    },
+    {
+     "file": "seek.ogg",
+     "name": "Seek"
+    },
+    {
+     "file": "select.ogg",
+     "name": "Select",
+     "role": "select"
+    },
+    {
+     "file": "send.ogg",
+     "name": "Send",
+     "role": "send"
+    },
+    {
+     "file": "skip-next.ogg",
+     "name": "Skip next"
+    },
+    {
+     "file": "skip-previous.ogg",
+     "name": "Skip previous"
+    },
+    {
+     "file": "sleep.ogg",
+     "name": "Sleep"
+    },
+    {
+     "file": "snap.ogg",
+     "name": "Snap"
+    },
+    {
+     "file": "start.ogg",
+     "name": "Start"
+    },
+    {
+     "file": "stop.ogg",
+     "name": "Stop"
+    },
+    {
+     "file": "streak.ogg",
+     "name": "Streak"
+    },
+    {
+     "file": "streaming.ogg",
+     "name": "Streaming"
+    },
+    {
+     "file": "success.ogg",
+     "name": "Success",
+     "role": "success"
+    },
+    {
+     "file": "swipe.ogg",
+     "name": "Swipe",
+     "role": "swipe"
+    },
+    {
+     "file": "toggle-off.ogg",
+     "name": "Toggle off",
+     "role": "toggle-off"
+    },
+    {
+     "file": "toggle-on.ogg",
+     "name": "Toggle on",
+     "role": "toggle-on"
+    },
+    {
+     "file": "typing.ogg",
+     "name": "Typing",
+     "role": "typing"
+    },
+    {
+     "file": "uncheck.ogg",
+     "name": "Uncheck"
+    },
+    {
+     "file": "undo.ogg",
+     "name": "Undo"
+    },
+    {
+     "file": "unlock.ogg",
+     "name": "Unlock",
+     "role": "unlock"
+    },
+    {
+     "file": "volume-change.ogg",
+     "name": "Volume change"
+    },
+    {
+     "file": "wake.ogg",
+     "name": "Wake"
+    },
+    {
+     "file": "warning.ogg",
+     "name": "Warning",
+     "role": "warning"
+    }
+   ]
+  },
+  {
+   "id": "uisfx-glass",
+   "name": "uisfx Glass",
+   "by": "uisfx",
+   "about": "Bright, crystalline, and premium. Best for media, finance, luxury products. 78 sounds made by a synthesizer.",
+   "license": "CC0 1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "source": "https://github.com/romainsimon/uisfx",
+   "credit": "uisfx Glass pack (github.com/romainsimon/uisfx), audio CC0 1.0.",
+   "shareAlike": false,
+   "pack": "Glass",
+   "sounds": [
+    {
+     "file": "achievement.ogg",
+     "name": "Achievement",
+     "role": "celebrate"
+    },
+    {
+     "file": "add-to-cart.ogg",
+     "name": "Add to cart"
+    },
+    {
+     "file": "back.ogg",
+     "name": "Back",
+     "role": "back"
+    },
+    {
+     "file": "badge.ogg",
+     "name": "Badge"
+    },
+    {
+     "file": "blocked.ogg",
+     "name": "Blocked"
+    },
+    {
+     "file": "bonus.ogg",
+     "name": "Bonus"
+    },
+    {
+     "file": "cancel.ogg",
+     "name": "Cancel",
+     "role": "cancel"
+    },
+    {
+     "file": "check.ogg",
+     "name": "Check",
+     "role": "select"
+    },
+    {
+     "file": "checkout.ogg",
+     "name": "Checkout"
+    },
+    {
+     "file": "checkpoint.ogg",
+     "name": "Checkpoint"
+    },
+    {
+     "file": "close.ogg",
+     "name": "Close",
+     "role": "close"
+    },
+    {
+     "file": "collapse.ogg",
+     "name": "Collapse"
+    },
+    {
+     "file": "complete.ogg",
+     "name": "Complete",
+     "role": "complete"
+    },
+    {
+     "file": "connect.ogg",
+     "name": "Connect",
+     "role": "connect"
+    },
+    {
+     "file": "connecting.ogg",
+     "name": "Connecting"
+    },
+    {
+     "file": "copy.ogg",
+     "name": "Copy"
+    },
+    {
+     "file": "coupon.ogg",
+     "name": "Coupon"
+    },
+    {
+     "file": "delete.ogg",
+     "name": "Delete",
+     "role": "delete"
+    },
+    {
+     "file": "deselect.ogg",
+     "name": "Deselect"
+    },
+    {
+     "file": "disconnect.ogg",
+     "name": "Disconnect",
+     "role": "disconnect"
+    },
+    {
+     "file": "double-click.ogg",
+     "name": "Double click"
+    },
+    {
+     "file": "drag-start.ogg",
+     "name": "Drag start"
+    },
+    {
+     "file": "drop.ogg",
+     "name": "Drop"
+    },
+    {
+     "file": "error.ogg",
+     "name": "Error",
+     "role": "error"
+    },
+    {
+     "file": "expand.ogg",
+     "name": "Expand"
+    },
+    {
+     "file": "focus.ogg",
+     "name": "Focus",
+     "role": "focus"
+    },
+    {
+     "file": "forward.ogg",
+     "name": "Forward"
+    },
+    {
+     "file": "hover.ogg",
+     "name": "Hover",
+     "role": "hover"
+    },
+    {
+     "file": "info.ogg",
+     "name": "Info"
+    },
+    {
+     "file": "invalid-drop.ogg",
+     "name": "Invalid drop"
+    },
+    {
+     "file": "level-up.ogg",
+     "name": "Level up",
+     "role": "celebrate"
+    },
+    {
+     "file": "loading.ogg",
+     "name": "Loading"
+    },
+    {
+     "file": "lock.ogg",
+     "name": "Lock",
+     "role": "lock"
+    },
+    {
+     "file": "long-press.ogg",
+     "name": "Long press"
+    },
+    {
+     "file": "mention.ogg",
+     "name": "Mention",
+     "role": "notification"
+    },
+    {
+     "file": "notification.ogg",
+     "name": "Notification",
+     "role": "notification"
+    },
+    {
+     "file": "open.ogg",
+     "name": "Open",
+     "role": "open"
+    },
+    {
+     "file": "paste.ogg",
+     "name": "Paste"
+    },
+    {
+     "file": "pause.ogg",
+     "name": "Pause"
+    },
+    {
+     "file": "play.ogg",
+     "name": "Play"
+    },
+    {
+     "file": "press.ogg",
+     "name": "Press",
+     "role": "tap"
+    },
+    {
+     "file": "processing.ogg",
+     "name": "Processing"
+    },
+    {
+     "file": "progress-step.ogg",
+     "name": "Progress step"
+    },
+    {
+     "file": "purchase.ogg",
+     "name": "Purchase"
+    },
+    {
+     "file": "queued.ogg",
+     "name": "Queued"
+    },
+    {
+     "file": "reaction.ogg",
+     "name": "Reaction"
+    },
+    {
+     "file": "receive.ogg",
+     "name": "Receive",
+     "role": "receive"
+    },
+    {
+     "file": "recording.ogg",
+     "name": "Recording"
+    },
+    {
+     "file": "redo.ogg",
+     "name": "Redo"
+    },
+    {
+     "file": "refund.ogg",
+     "name": "Refund"
+    },
+    {
+     "file": "release.ogg",
+     "name": "Release"
+    },
+    {
+     "file": "remove-from-cart.ogg",
+     "name": "Remove from cart"
+    },
+    {
+     "file": "reorder.ogg",
+     "name": "Reorder"
+    },
+    {
+     "file": "retry.ogg",
+     "name": "Retry"
+    },
+    {
+     "file": "reward.ogg",
+     "name": "Reward"
+    },
+    {
+     "file": "scanning.ogg",
+     "name": "Scanning"
+    },
+    {
+     "file": "seek.ogg",
+     "name": "Seek"
+    },
+    {
+     "file": "select.ogg",
+     "name": "Select",
+     "role": "select"
+    },
+    {
+     "file": "send.ogg",
+     "name": "Send",
+     "role": "send"
+    },
+    {
+     "file": "skip-next.ogg",
+     "name": "Skip next"
+    },
+    {
+     "file": "skip-previous.ogg",
+     "name": "Skip previous"
+    },
+    {
+     "file": "sleep.ogg",
+     "name": "Sleep"
+    },
+    {
+     "file": "snap.ogg",
+     "name": "Snap"
+    },
+    {
+     "file": "start.ogg",
+     "name": "Start"
+    },
+    {
+     "file": "stop.ogg",
+     "name": "Stop"
+    },
+    {
+     "file": "streak.ogg",
+     "name": "Streak"
+    },
+    {
+     "file": "streaming.ogg",
+     "name": "Streaming"
+    },
+    {
+     "file": "success.ogg",
+     "name": "Success",
+     "role": "success"
+    },
+    {
+     "file": "swipe.ogg",
+     "name": "Swipe",
+     "role": "swipe"
+    },
+    {
+     "file": "toggle-off.ogg",
+     "name": "Toggle off",
+     "role": "toggle-off"
+    },
+    {
+     "file": "toggle-on.ogg",
+     "name": "Toggle on",
+     "role": "toggle-on"
+    },
+    {
+     "file": "typing.ogg",
+     "name": "Typing",
+     "role": "typing"
+    },
+    {
+     "file": "uncheck.ogg",
+     "name": "Uncheck"
+    },
+    {
+     "file": "undo.ogg",
+     "name": "Undo"
+    },
+    {
+     "file": "unlock.ogg",
+     "name": "Unlock",
+     "role": "unlock"
+    },
+    {
+     "file": "volume-change.ogg",
+     "name": "Volume change"
+    },
+    {
+     "file": "wake.ogg",
+     "name": "Wake"
+    },
+    {
+     "file": "warning.ogg",
+     "name": "Warning",
+     "role": "warning"
+    }
+   ]
+  },
+  {
+   "id": "uisfx-mechanical",
+   "name": "uisfx Mechanical",
+   "by": "uisfx",
+   "about": "Switches, relays, and firm detents. Best for devtools, hardware, industrial UI. 78 sounds made by a synthesizer.",
+   "license": "CC0 1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "source": "https://github.com/romainsimon/uisfx",
+   "credit": "uisfx Mechanical pack (github.com/romainsimon/uisfx), audio CC0 1.0.",
+   "shareAlike": false,
+   "pack": "Mechanical",
+   "sounds": [
+    {
+     "file": "achievement.ogg",
+     "name": "Achievement",
+     "role": "celebrate"
+    },
+    {
+     "file": "add-to-cart.ogg",
+     "name": "Add to cart"
+    },
+    {
+     "file": "back.ogg",
+     "name": "Back",
+     "role": "back"
+    },
+    {
+     "file": "badge.ogg",
+     "name": "Badge"
+    },
+    {
+     "file": "blocked.ogg",
+     "name": "Blocked"
+    },
+    {
+     "file": "bonus.ogg",
+     "name": "Bonus"
+    },
+    {
+     "file": "cancel.ogg",
+     "name": "Cancel",
+     "role": "cancel"
+    },
+    {
+     "file": "check.ogg",
+     "name": "Check",
+     "role": "select"
+    },
+    {
+     "file": "checkout.ogg",
+     "name": "Checkout"
+    },
+    {
+     "file": "checkpoint.ogg",
+     "name": "Checkpoint"
+    },
+    {
+     "file": "close.ogg",
+     "name": "Close",
+     "role": "close"
+    },
+    {
+     "file": "collapse.ogg",
+     "name": "Collapse"
+    },
+    {
+     "file": "complete.ogg",
+     "name": "Complete",
+     "role": "complete"
+    },
+    {
+     "file": "connect.ogg",
+     "name": "Connect",
+     "role": "connect"
+    },
+    {
+     "file": "connecting.ogg",
+     "name": "Connecting"
+    },
+    {
+     "file": "copy.ogg",
+     "name": "Copy"
+    },
+    {
+     "file": "coupon.ogg",
+     "name": "Coupon"
+    },
+    {
+     "file": "delete.ogg",
+     "name": "Delete",
+     "role": "delete"
+    },
+    {
+     "file": "deselect.ogg",
+     "name": "Deselect"
+    },
+    {
+     "file": "disconnect.ogg",
+     "name": "Disconnect",
+     "role": "disconnect"
+    },
+    {
+     "file": "double-click.ogg",
+     "name": "Double click"
+    },
+    {
+     "file": "drag-start.ogg",
+     "name": "Drag start"
+    },
+    {
+     "file": "drop.ogg",
+     "name": "Drop"
+    },
+    {
+     "file": "error.ogg",
+     "name": "Error",
+     "role": "error"
+    },
+    {
+     "file": "expand.ogg",
+     "name": "Expand"
+    },
+    {
+     "file": "focus.ogg",
+     "name": "Focus",
+     "role": "focus"
+    },
+    {
+     "file": "forward.ogg",
+     "name": "Forward"
+    },
+    {
+     "file": "hover.ogg",
+     "name": "Hover",
+     "role": "hover"
+    },
+    {
+     "file": "info.ogg",
+     "name": "Info"
+    },
+    {
+     "file": "invalid-drop.ogg",
+     "name": "Invalid drop"
+    },
+    {
+     "file": "level-up.ogg",
+     "name": "Level up",
+     "role": "celebrate"
+    },
+    {
+     "file": "loading.ogg",
+     "name": "Loading"
+    },
+    {
+     "file": "lock.ogg",
+     "name": "Lock",
+     "role": "lock"
+    },
+    {
+     "file": "long-press.ogg",
+     "name": "Long press"
+    },
+    {
+     "file": "mention.ogg",
+     "name": "Mention",
+     "role": "notification"
+    },
+    {
+     "file": "notification.ogg",
+     "name": "Notification",
+     "role": "notification"
+    },
+    {
+     "file": "open.ogg",
+     "name": "Open",
+     "role": "open"
+    },
+    {
+     "file": "paste.ogg",
+     "name": "Paste"
+    },
+    {
+     "file": "pause.ogg",
+     "name": "Pause"
+    },
+    {
+     "file": "play.ogg",
+     "name": "Play"
+    },
+    {
+     "file": "press.ogg",
+     "name": "Press",
+     "role": "tap"
+    },
+    {
+     "file": "processing.ogg",
+     "name": "Processing"
+    },
+    {
+     "file": "progress-step.ogg",
+     "name": "Progress step"
+    },
+    {
+     "file": "purchase.ogg",
+     "name": "Purchase"
+    },
+    {
+     "file": "queued.ogg",
+     "name": "Queued"
+    },
+    {
+     "file": "reaction.ogg",
+     "name": "Reaction"
+    },
+    {
+     "file": "receive.ogg",
+     "name": "Receive",
+     "role": "receive"
+    },
+    {
+     "file": "recording.ogg",
+     "name": "Recording"
+    },
+    {
+     "file": "redo.ogg",
+     "name": "Redo"
+    },
+    {
+     "file": "refund.ogg",
+     "name": "Refund"
+    },
+    {
+     "file": "release.ogg",
+     "name": "Release"
+    },
+    {
+     "file": "remove-from-cart.ogg",
+     "name": "Remove from cart"
+    },
+    {
+     "file": "reorder.ogg",
+     "name": "Reorder"
+    },
+    {
+     "file": "retry.ogg",
+     "name": "Retry"
+    },
+    {
+     "file": "reward.ogg",
+     "name": "Reward"
+    },
+    {
+     "file": "scanning.ogg",
+     "name": "Scanning"
+    },
+    {
+     "file": "seek.ogg",
+     "name": "Seek"
+    },
+    {
+     "file": "select.ogg",
+     "name": "Select",
+     "role": "select"
+    },
+    {
+     "file": "send.ogg",
+     "name": "Send",
+     "role": "send"
+    },
+    {
+     "file": "skip-next.ogg",
+     "name": "Skip next"
+    },
+    {
+     "file": "skip-previous.ogg",
+     "name": "Skip previous"
+    },
+    {
+     "file": "sleep.ogg",
+     "name": "Sleep"
+    },
+    {
+     "file": "snap.ogg",
+     "name": "Snap"
+    },
+    {
+     "file": "start.ogg",
+     "name": "Start"
+    },
+    {
+     "file": "stop.ogg",
+     "name": "Stop"
+    },
+    {
+     "file": "streak.ogg",
+     "name": "Streak"
+    },
+    {
+     "file": "streaming.ogg",
+     "name": "Streaming"
+    },
+    {
+     "file": "success.ogg",
+     "name": "Success",
+     "role": "success"
+    },
+    {
+     "file": "swipe.ogg",
+     "name": "Swipe",
+     "role": "swipe"
+    },
+    {
+     "file": "toggle-off.ogg",
+     "name": "Toggle off",
+     "role": "toggle-off"
+    },
+    {
+     "file": "toggle-on.ogg",
+     "name": "Toggle on",
+     "role": "toggle-on"
+    },
+    {
+     "file": "typing.ogg",
+     "name": "Typing",
+     "role": "typing"
+    },
+    {
+     "file": "uncheck.ogg",
+     "name": "Uncheck"
+    },
+    {
+     "file": "undo.ogg",
+     "name": "Undo"
+    },
+    {
+     "file": "unlock.ogg",
+     "name": "Unlock",
+     "role": "unlock"
+    },
+    {
+     "file": "volume-change.ogg",
+     "name": "Volume change"
+    },
+    {
+     "file": "wake.ogg",
+     "name": "Wake"
+    },
+    {
+     "file": "warning.ogg",
+     "name": "Warning",
+     "role": "warning"
+    }
+   ]
+  },
+  {
+   "id": "uisfx-organic",
+   "name": "uisfx Organic",
+   "by": "uisfx",
+   "about": "Wood, water, breath, and small stones. Best for education, kids, calm games. 78 sounds made by a synthesizer.",
+   "license": "CC0 1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "source": "https://github.com/romainsimon/uisfx",
+   "credit": "uisfx Organic pack (github.com/romainsimon/uisfx), audio CC0 1.0.",
+   "shareAlike": false,
+   "pack": "Organic",
+   "sounds": [
+    {
+     "file": "achievement.ogg",
+     "name": "Achievement",
+     "role": "celebrate"
+    },
+    {
+     "file": "add-to-cart.ogg",
+     "name": "Add to cart"
+    },
+    {
+     "file": "back.ogg",
+     "name": "Back",
+     "role": "back"
+    },
+    {
+     "file": "badge.ogg",
+     "name": "Badge"
+    },
+    {
+     "file": "blocked.ogg",
+     "name": "Blocked"
+    },
+    {
+     "file": "bonus.ogg",
+     "name": "Bonus"
+    },
+    {
+     "file": "cancel.ogg",
+     "name": "Cancel",
+     "role": "cancel"
+    },
+    {
+     "file": "check.ogg",
+     "name": "Check",
+     "role": "select"
+    },
+    {
+     "file": "checkout.ogg",
+     "name": "Checkout"
+    },
+    {
+     "file": "checkpoint.ogg",
+     "name": "Checkpoint"
+    },
+    {
+     "file": "close.ogg",
+     "name": "Close",
+     "role": "close"
+    },
+    {
+     "file": "collapse.ogg",
+     "name": "Collapse"
+    },
+    {
+     "file": "complete.ogg",
+     "name": "Complete",
+     "role": "complete"
+    },
+    {
+     "file": "connect.ogg",
+     "name": "Connect",
+     "role": "connect"
+    },
+    {
+     "file": "connecting.ogg",
+     "name": "Connecting"
+    },
+    {
+     "file": "copy.ogg",
+     "name": "Copy"
+    },
+    {
+     "file": "coupon.ogg",
+     "name": "Coupon"
+    },
+    {
+     "file": "delete.ogg",
+     "name": "Delete",
+     "role": "delete"
+    },
+    {
+     "file": "deselect.ogg",
+     "name": "Deselect"
+    },
+    {
+     "file": "disconnect.ogg",
+     "name": "Disconnect",
+     "role": "disconnect"
+    },
+    {
+     "file": "double-click.ogg",
+     "name": "Double click"
+    },
+    {
+     "file": "drag-start.ogg",
+     "name": "Drag start"
+    },
+    {
+     "file": "drop.ogg",
+     "name": "Drop"
+    },
+    {
+     "file": "error.ogg",
+     "name": "Error",
+     "role": "error"
+    },
+    {
+     "file": "expand.ogg",
+     "name": "Expand"
+    },
+    {
+     "file": "focus.ogg",
+     "name": "Focus",
+     "role": "focus"
+    },
+    {
+     "file": "forward.ogg",
+     "name": "Forward"
+    },
+    {
+     "file": "hover.ogg",
+     "name": "Hover",
+     "role": "hover"
+    },
+    {
+     "file": "info.ogg",
+     "name": "Info"
+    },
+    {
+     "file": "invalid-drop.ogg",
+     "name": "Invalid drop"
+    },
+    {
+     "file": "level-up.ogg",
+     "name": "Level up",
+     "role": "celebrate"
+    },
+    {
+     "file": "loading.ogg",
+     "name": "Loading"
+    },
+    {
+     "file": "lock.ogg",
+     "name": "Lock",
+     "role": "lock"
+    },
+    {
+     "file": "long-press.ogg",
+     "name": "Long press"
+    },
+    {
+     "file": "mention.ogg",
+     "name": "Mention",
+     "role": "notification"
+    },
+    {
+     "file": "notification.ogg",
+     "name": "Notification",
+     "role": "notification"
+    },
+    {
+     "file": "open.ogg",
+     "name": "Open",
+     "role": "open"
+    },
+    {
+     "file": "paste.ogg",
+     "name": "Paste"
+    },
+    {
+     "file": "pause.ogg",
+     "name": "Pause"
+    },
+    {
+     "file": "play.ogg",
+     "name": "Play"
+    },
+    {
+     "file": "press.ogg",
+     "name": "Press",
+     "role": "tap"
+    },
+    {
+     "file": "processing.ogg",
+     "name": "Processing"
+    },
+    {
+     "file": "progress-step.ogg",
+     "name": "Progress step"
+    },
+    {
+     "file": "purchase.ogg",
+     "name": "Purchase"
+    },
+    {
+     "file": "queued.ogg",
+     "name": "Queued"
+    },
+    {
+     "file": "reaction.ogg",
+     "name": "Reaction"
+    },
+    {
+     "file": "receive.ogg",
+     "name": "Receive",
+     "role": "receive"
+    },
+    {
+     "file": "recording.ogg",
+     "name": "Recording"
+    },
+    {
+     "file": "redo.ogg",
+     "name": "Redo"
+    },
+    {
+     "file": "refund.ogg",
+     "name": "Refund"
+    },
+    {
+     "file": "release.ogg",
+     "name": "Release"
+    },
+    {
+     "file": "remove-from-cart.ogg",
+     "name": "Remove from cart"
+    },
+    {
+     "file": "reorder.ogg",
+     "name": "Reorder"
+    },
+    {
+     "file": "retry.ogg",
+     "name": "Retry"
+    },
+    {
+     "file": "reward.ogg",
+     "name": "Reward"
+    },
+    {
+     "file": "scanning.ogg",
+     "name": "Scanning"
+    },
+    {
+     "file": "seek.ogg",
+     "name": "Seek"
+    },
+    {
+     "file": "select.ogg",
+     "name": "Select",
+     "role": "select"
+    },
+    {
+     "file": "send.ogg",
+     "name": "Send",
+     "role": "send"
+    },
+    {
+     "file": "skip-next.ogg",
+     "name": "Skip next"
+    },
+    {
+     "file": "skip-previous.ogg",
+     "name": "Skip previous"
+    },
+    {
+     "file": "sleep.ogg",
+     "name": "Sleep"
+    },
+    {
+     "file": "snap.ogg",
+     "name": "Snap"
+    },
+    {
+     "file": "start.ogg",
+     "name": "Start"
+    },
+    {
+     "file": "stop.ogg",
+     "name": "Stop"
+    },
+    {
+     "file": "streak.ogg",
+     "name": "Streak"
+    },
+    {
+     "file": "streaming.ogg",
+     "name": "Streaming"
+    },
+    {
+     "file": "success.ogg",
+     "name": "Success",
+     "role": "success"
+    },
+    {
+     "file": "swipe.ogg",
+     "name": "Swipe",
+     "role": "swipe"
+    },
+    {
+     "file": "toggle-off.ogg",
+     "name": "Toggle off",
+     "role": "toggle-off"
+    },
+    {
+     "file": "toggle-on.ogg",
+     "name": "Toggle on",
+     "role": "toggle-on"
+    },
+    {
+     "file": "typing.ogg",
+     "name": "Typing",
+     "role": "typing"
+    },
+    {
+     "file": "uncheck.ogg",
+     "name": "Uncheck"
+    },
+    {
+     "file": "undo.ogg",
+     "name": "Undo"
+    },
+    {
+     "file": "unlock.ogg",
+     "name": "Unlock",
+     "role": "unlock"
+    },
+    {
+     "file": "volume-change.ogg",
+     "name": "Volume change"
+    },
+    {
+     "file": "wake.ogg",
+     "name": "Wake"
+    },
+    {
+     "file": "warning.ogg",
+     "name": "Warning",
+     "role": "warning"
+    }
+   ]
+  },
+  {
+   "id": "uisfx-dreamy",
+   "name": "uisfx Dreamy",
+   "by": "uisfx",
+   "about": "Airy blooms, soft light, and slow sparkle. Best for creative tools, wellness, ambient apps. 78 sounds made by a synthesizer.",
+   "license": "CC0 1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "source": "https://github.com/romainsimon/uisfx",
+   "credit": "uisfx Dreamy pack (github.com/romainsimon/uisfx), audio CC0 1.0.",
+   "shareAlike": false,
+   "pack": "Dreamy",
+   "sounds": [
+    {
+     "file": "achievement.ogg",
+     "name": "Achievement",
+     "role": "celebrate"
+    },
+    {
+     "file": "add-to-cart.ogg",
+     "name": "Add to cart"
+    },
+    {
+     "file": "back.ogg",
+     "name": "Back",
+     "role": "back"
+    },
+    {
+     "file": "badge.ogg",
+     "name": "Badge"
+    },
+    {
+     "file": "blocked.ogg",
+     "name": "Blocked"
+    },
+    {
+     "file": "bonus.ogg",
+     "name": "Bonus"
+    },
+    {
+     "file": "cancel.ogg",
+     "name": "Cancel",
+     "role": "cancel"
+    },
+    {
+     "file": "check.ogg",
+     "name": "Check",
+     "role": "select"
+    },
+    {
+     "file": "checkout.ogg",
+     "name": "Checkout"
+    },
+    {
+     "file": "checkpoint.ogg",
+     "name": "Checkpoint"
+    },
+    {
+     "file": "close.ogg",
+     "name": "Close",
+     "role": "close"
+    },
+    {
+     "file": "collapse.ogg",
+     "name": "Collapse"
+    },
+    {
+     "file": "complete.ogg",
+     "name": "Complete",
+     "role": "complete"
+    },
+    {
+     "file": "connect.ogg",
+     "name": "Connect",
+     "role": "connect"
+    },
+    {
+     "file": "connecting.ogg",
+     "name": "Connecting"
+    },
+    {
+     "file": "copy.ogg",
+     "name": "Copy"
+    },
+    {
+     "file": "coupon.ogg",
+     "name": "Coupon"
+    },
+    {
+     "file": "delete.ogg",
+     "name": "Delete",
+     "role": "delete"
+    },
+    {
+     "file": "deselect.ogg",
+     "name": "Deselect"
+    },
+    {
+     "file": "disconnect.ogg",
+     "name": "Disconnect",
+     "role": "disconnect"
+    },
+    {
+     "file": "double-click.ogg",
+     "name": "Double click"
+    },
+    {
+     "file": "drag-start.ogg",
+     "name": "Drag start"
+    },
+    {
+     "file": "drop.ogg",
+     "name": "Drop"
+    },
+    {
+     "file": "error.ogg",
+     "name": "Error",
+     "role": "error"
+    },
+    {
+     "file": "expand.ogg",
+     "name": "Expand"
+    },
+    {
+     "file": "focus.ogg",
+     "name": "Focus",
+     "role": "focus"
+    },
+    {
+     "file": "forward.ogg",
+     "name": "Forward"
+    },
+    {
+     "file": "hover.ogg",
+     "name": "Hover",
+     "role": "hover"
+    },
+    {
+     "file": "info.ogg",
+     "name": "Info"
+    },
+    {
+     "file": "invalid-drop.ogg",
+     "name": "Invalid drop"
+    },
+    {
+     "file": "level-up.ogg",
+     "name": "Level up",
+     "role": "celebrate"
+    },
+    {
+     "file": "loading.ogg",
+     "name": "Loading"
+    },
+    {
+     "file": "lock.ogg",
+     "name": "Lock",
+     "role": "lock"
+    },
+    {
+     "file": "long-press.ogg",
+     "name": "Long press"
+    },
+    {
+     "file": "mention.ogg",
+     "name": "Mention",
+     "role": "notification"
+    },
+    {
+     "file": "notification.ogg",
+     "name": "Notification",
+     "role": "notification"
+    },
+    {
+     "file": "open.ogg",
+     "name": "Open",
+     "role": "open"
+    },
+    {
+     "file": "paste.ogg",
+     "name": "Paste"
+    },
+    {
+     "file": "pause.ogg",
+     "name": "Pause"
+    },
+    {
+     "file": "play.ogg",
+     "name": "Play"
+    },
+    {
+     "file": "press.ogg",
+     "name": "Press",
+     "role": "tap"
+    },
+    {
+     "file": "processing.ogg",
+     "name": "Processing"
+    },
+    {
+     "file": "progress-step.ogg",
+     "name": "Progress step"
+    },
+    {
+     "file": "purchase.ogg",
+     "name": "Purchase"
+    },
+    {
+     "file": "queued.ogg",
+     "name": "Queued"
+    },
+    {
+     "file": "reaction.ogg",
+     "name": "Reaction"
+    },
+    {
+     "file": "receive.ogg",
+     "name": "Receive",
+     "role": "receive"
+    },
+    {
+     "file": "recording.ogg",
+     "name": "Recording"
+    },
+    {
+     "file": "redo.ogg",
+     "name": "Redo"
+    },
+    {
+     "file": "refund.ogg",
+     "name": "Refund"
+    },
+    {
+     "file": "release.ogg",
+     "name": "Release"
+    },
+    {
+     "file": "remove-from-cart.ogg",
+     "name": "Remove from cart"
+    },
+    {
+     "file": "reorder.ogg",
+     "name": "Reorder"
+    },
+    {
+     "file": "retry.ogg",
+     "name": "Retry"
+    },
+    {
+     "file": "reward.ogg",
+     "name": "Reward"
+    },
+    {
+     "file": "scanning.ogg",
+     "name": "Scanning"
+    },
+    {
+     "file": "seek.ogg",
+     "name": "Seek"
+    },
+    {
+     "file": "select.ogg",
+     "name": "Select",
+     "role": "select"
+    },
+    {
+     "file": "send.ogg",
+     "name": "Send",
+     "role": "send"
+    },
+    {
+     "file": "skip-next.ogg",
+     "name": "Skip next"
+    },
+    {
+     "file": "skip-previous.ogg",
+     "name": "Skip previous"
+    },
+    {
+     "file": "sleep.ogg",
+     "name": "Sleep"
+    },
+    {
+     "file": "snap.ogg",
+     "name": "Snap"
+    },
+    {
+     "file": "start.ogg",
+     "name": "Start"
+    },
+    {
+     "file": "stop.ogg",
+     "name": "Stop"
+    },
+    {
+     "file": "streak.ogg",
+     "name": "Streak"
+    },
+    {
+     "file": "streaming.ogg",
+     "name": "Streaming"
+    },
+    {
+     "file": "success.ogg",
+     "name": "Success",
+     "role": "success"
+    },
+    {
+     "file": "swipe.ogg",
+     "name": "Swipe",
+     "role": "swipe"
+    },
+    {
+     "file": "toggle-off.ogg",
+     "name": "Toggle off",
+     "role": "toggle-off"
+    },
+    {
+     "file": "toggle-on.ogg",
+     "name": "Toggle on",
+     "role": "toggle-on"
+    },
+    {
+     "file": "typing.ogg",
+     "name": "Typing",
+     "role": "typing"
+    },
+    {
+     "file": "uncheck.ogg",
+     "name": "Uncheck"
+    },
+    {
+     "file": "undo.ogg",
+     "name": "Undo"
+    },
+    {
+     "file": "unlock.ogg",
+     "name": "Unlock",
+     "role": "unlock"
+    },
+    {
+     "file": "volume-change.ogg",
+     "name": "Volume change"
+    },
+    {
+     "file": "wake.ogg",
+     "name": "Wake"
+    },
+    {
+     "file": "warning.ogg",
+     "name": "Warning",
+     "role": "warning"
+    }
+   ]
+  },
+  {
+   "id": "uisfx-scifi",
+   "name": "uisfx Sci-fi",
+   "by": "uisfx",
+   "about": "Clean holographic pings with a restrained digital shimmer. Best for aI tools, spatial UI, futuristic games. 78 sounds made by a synthesizer.",
+   "license": "CC0 1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "source": "https://github.com/romainsimon/uisfx",
+   "credit": "uisfx Sci-fi pack (github.com/romainsimon/uisfx), audio CC0 1.0.",
+   "shareAlike": false,
+   "pack": "Sci-fi",
+   "sounds": [
+    {
+     "file": "achievement.ogg",
+     "name": "Achievement",
+     "role": "celebrate"
+    },
+    {
+     "file": "add-to-cart.ogg",
+     "name": "Add to cart"
+    },
+    {
+     "file": "back.ogg",
+     "name": "Back",
+     "role": "back"
+    },
+    {
+     "file": "badge.ogg",
+     "name": "Badge"
+    },
+    {
+     "file": "blocked.ogg",
+     "name": "Blocked"
+    },
+    {
+     "file": "bonus.ogg",
+     "name": "Bonus"
+    },
+    {
+     "file": "cancel.ogg",
+     "name": "Cancel",
+     "role": "cancel"
+    },
+    {
+     "file": "check.ogg",
+     "name": "Check",
+     "role": "select"
+    },
+    {
+     "file": "checkout.ogg",
+     "name": "Checkout"
+    },
+    {
+     "file": "checkpoint.ogg",
+     "name": "Checkpoint"
+    },
+    {
+     "file": "close.ogg",
+     "name": "Close",
+     "role": "close"
+    },
+    {
+     "file": "collapse.ogg",
+     "name": "Collapse"
+    },
+    {
+     "file": "complete.ogg",
+     "name": "Complete",
+     "role": "complete"
+    },
+    {
+     "file": "connect.ogg",
+     "name": "Connect",
+     "role": "connect"
+    },
+    {
+     "file": "connecting.ogg",
+     "name": "Connecting"
+    },
+    {
+     "file": "copy.ogg",
+     "name": "Copy"
+    },
+    {
+     "file": "coupon.ogg",
+     "name": "Coupon"
+    },
+    {
+     "file": "delete.ogg",
+     "name": "Delete",
+     "role": "delete"
+    },
+    {
+     "file": "deselect.ogg",
+     "name": "Deselect"
+    },
+    {
+     "file": "disconnect.ogg",
+     "name": "Disconnect",
+     "role": "disconnect"
+    },
+    {
+     "file": "double-click.ogg",
+     "name": "Double click"
+    },
+    {
+     "file": "drag-start.ogg",
+     "name": "Drag start"
+    },
+    {
+     "file": "drop.ogg",
+     "name": "Drop"
+    },
+    {
+     "file": "error.ogg",
+     "name": "Error",
+     "role": "error"
+    },
+    {
+     "file": "expand.ogg",
+     "name": "Expand"
+    },
+    {
+     "file": "focus.ogg",
+     "name": "Focus",
+     "role": "focus"
+    },
+    {
+     "file": "forward.ogg",
+     "name": "Forward"
+    },
+    {
+     "file": "hover.ogg",
+     "name": "Hover",
+     "role": "hover"
+    },
+    {
+     "file": "info.ogg",
+     "name": "Info"
+    },
+    {
+     "file": "invalid-drop.ogg",
+     "name": "Invalid drop"
+    },
+    {
+     "file": "level-up.ogg",
+     "name": "Level up",
+     "role": "celebrate"
+    },
+    {
+     "file": "loading.ogg",
+     "name": "Loading"
+    },
+    {
+     "file": "lock.ogg",
+     "name": "Lock",
+     "role": "lock"
+    },
+    {
+     "file": "long-press.ogg",
+     "name": "Long press"
+    },
+    {
+     "file": "mention.ogg",
+     "name": "Mention",
+     "role": "notification"
+    },
+    {
+     "file": "notification.ogg",
+     "name": "Notification",
+     "role": "notification"
+    },
+    {
+     "file": "open.ogg",
+     "name": "Open",
+     "role": "open"
+    },
+    {
+     "file": "paste.ogg",
+     "name": "Paste"
+    },
+    {
+     "file": "pause.ogg",
+     "name": "Pause"
+    },
+    {
+     "file": "play.ogg",
+     "name": "Play"
+    },
+    {
+     "file": "press.ogg",
+     "name": "Press",
+     "role": "tap"
+    },
+    {
+     "file": "processing.ogg",
+     "name": "Processing"
+    },
+    {
+     "file": "progress-step.ogg",
+     "name": "Progress step"
+    },
+    {
+     "file": "purchase.ogg",
+     "name": "Purchase"
+    },
+    {
+     "file": "queued.ogg",
+     "name": "Queued"
+    },
+    {
+     "file": "reaction.ogg",
+     "name": "Reaction"
+    },
+    {
+     "file": "receive.ogg",
+     "name": "Receive",
+     "role": "receive"
+    },
+    {
+     "file": "recording.ogg",
+     "name": "Recording"
+    },
+    {
+     "file": "redo.ogg",
+     "name": "Redo"
+    },
+    {
+     "file": "refund.ogg",
+     "name": "Refund"
+    },
+    {
+     "file": "release.ogg",
+     "name": "Release"
+    },
+    {
+     "file": "remove-from-cart.ogg",
+     "name": "Remove from cart"
+    },
+    {
+     "file": "reorder.ogg",
+     "name": "Reorder"
+    },
+    {
+     "file": "retry.ogg",
+     "name": "Retry"
+    },
+    {
+     "file": "reward.ogg",
+     "name": "Reward"
+    },
+    {
+     "file": "scanning.ogg",
+     "name": "Scanning"
+    },
+    {
+     "file": "seek.ogg",
+     "name": "Seek"
+    },
+    {
+     "file": "select.ogg",
+     "name": "Select",
+     "role": "select"
+    },
+    {
+     "file": "send.ogg",
+     "name": "Send",
+     "role": "send"
+    },
+    {
+     "file": "skip-next.ogg",
+     "name": "Skip next"
+    },
+    {
+     "file": "skip-previous.ogg",
+     "name": "Skip previous"
+    },
+    {
+     "file": "sleep.ogg",
+     "name": "Sleep"
+    },
+    {
+     "file": "snap.ogg",
+     "name": "Snap"
+    },
+    {
+     "file": "start.ogg",
+     "name": "Start"
+    },
+    {
+     "file": "stop.ogg",
+     "name": "Stop"
+    },
+    {
+     "file": "streak.ogg",
+     "name": "Streak"
+    },
+    {
+     "file": "streaming.ogg",
+     "name": "Streaming"
+    },
+    {
+     "file": "success.ogg",
+     "name": "Success",
+     "role": "success"
+    },
+    {
+     "file": "swipe.ogg",
+     "name": "Swipe",
+     "role": "swipe"
+    },
+    {
+     "file": "toggle-off.ogg",
+     "name": "Toggle off",
+     "role": "toggle-off"
+    },
+    {
+     "file": "toggle-on.ogg",
+     "name": "Toggle on",
+     "role": "toggle-on"
+    },
+    {
+     "file": "typing.ogg",
+     "name": "Typing",
+     "role": "typing"
+    },
+    {
+     "file": "uncheck.ogg",
+     "name": "Uncheck"
+    },
+    {
+     "file": "undo.ogg",
+     "name": "Undo"
+    },
+    {
+     "file": "unlock.ogg",
+     "name": "Unlock",
+     "role": "unlock"
+    },
+    {
+     "file": "volume-change.ogg",
+     "name": "Volume change"
+    },
+    {
+     "file": "wake.ogg",
+     "name": "Wake"
+    },
+    {
+     "file": "warning.ogg",
+     "name": "Warning",
+     "role": "warning"
+    }
+   ]
+  },
+  {
+   "id": "uisfx-rubber",
+   "name": "uisfx Rubber",
+   "by": "uisfx",
+   "about": "Tactile elastic taps with a quick, friendly rebound. Best for kids, playful mobile, casual games. 78 sounds made by a synthesizer.",
+   "license": "CC0 1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "source": "https://github.com/romainsimon/uisfx",
+   "credit": "uisfx Rubber pack (github.com/romainsimon/uisfx), audio CC0 1.0.",
+   "shareAlike": false,
+   "pack": "Rubber",
+   "sounds": [
+    {
+     "file": "achievement.ogg",
+     "name": "Achievement",
+     "role": "celebrate"
+    },
+    {
+     "file": "add-to-cart.ogg",
+     "name": "Add to cart"
+    },
+    {
+     "file": "back.ogg",
+     "name": "Back",
+     "role": "back"
+    },
+    {
+     "file": "badge.ogg",
+     "name": "Badge"
+    },
+    {
+     "file": "blocked.ogg",
+     "name": "Blocked"
+    },
+    {
+     "file": "bonus.ogg",
+     "name": "Bonus"
+    },
+    {
+     "file": "cancel.ogg",
+     "name": "Cancel",
+     "role": "cancel"
+    },
+    {
+     "file": "check.ogg",
+     "name": "Check",
+     "role": "select"
+    },
+    {
+     "file": "checkout.ogg",
+     "name": "Checkout"
+    },
+    {
+     "file": "checkpoint.ogg",
+     "name": "Checkpoint"
+    },
+    {
+     "file": "close.ogg",
+     "name": "Close",
+     "role": "close"
+    },
+    {
+     "file": "collapse.ogg",
+     "name": "Collapse"
+    },
+    {
+     "file": "complete.ogg",
+     "name": "Complete",
+     "role": "complete"
+    },
+    {
+     "file": "connect.ogg",
+     "name": "Connect",
+     "role": "connect"
+    },
+    {
+     "file": "connecting.ogg",
+     "name": "Connecting"
+    },
+    {
+     "file": "copy.ogg",
+     "name": "Copy"
+    },
+    {
+     "file": "coupon.ogg",
+     "name": "Coupon"
+    },
+    {
+     "file": "delete.ogg",
+     "name": "Delete",
+     "role": "delete"
+    },
+    {
+     "file": "deselect.ogg",
+     "name": "Deselect"
+    },
+    {
+     "file": "disconnect.ogg",
+     "name": "Disconnect",
+     "role": "disconnect"
+    },
+    {
+     "file": "double-click.ogg",
+     "name": "Double click"
+    },
+    {
+     "file": "drag-start.ogg",
+     "name": "Drag start"
+    },
+    {
+     "file": "drop.ogg",
+     "name": "Drop"
+    },
+    {
+     "file": "error.ogg",
+     "name": "Error",
+     "role": "error"
+    },
+    {
+     "file": "expand.ogg",
+     "name": "Expand"
+    },
+    {
+     "file": "focus.ogg",
+     "name": "Focus",
+     "role": "focus"
+    },
+    {
+     "file": "forward.ogg",
+     "name": "Forward"
+    },
+    {
+     "file": "hover.ogg",
+     "name": "Hover",
+     "role": "hover"
+    },
+    {
+     "file": "info.ogg",
+     "name": "Info"
+    },
+    {
+     "file": "invalid-drop.ogg",
+     "name": "Invalid drop"
+    },
+    {
+     "file": "level-up.ogg",
+     "name": "Level up",
+     "role": "celebrate"
+    },
+    {
+     "file": "loading.ogg",
+     "name": "Loading"
+    },
+    {
+     "file": "lock.ogg",
+     "name": "Lock",
+     "role": "lock"
+    },
+    {
+     "file": "long-press.ogg",
+     "name": "Long press"
+    },
+    {
+     "file": "mention.ogg",
+     "name": "Mention",
+     "role": "notification"
+    },
+    {
+     "file": "notification.ogg",
+     "name": "Notification",
+     "role": "notification"
+    },
+    {
+     "file": "open.ogg",
+     "name": "Open",
+     "role": "open"
+    },
+    {
+     "file": "paste.ogg",
+     "name": "Paste"
+    },
+    {
+     "file": "pause.ogg",
+     "name": "Pause"
+    },
+    {
+     "file": "play.ogg",
+     "name": "Play"
+    },
+    {
+     "file": "press.ogg",
+     "name": "Press",
+     "role": "tap"
+    },
+    {
+     "file": "processing.ogg",
+     "name": "Processing"
+    },
+    {
+     "file": "progress-step.ogg",
+     "name": "Progress step"
+    },
+    {
+     "file": "purchase.ogg",
+     "name": "Purchase"
+    },
+    {
+     "file": "queued.ogg",
+     "name": "Queued"
+    },
+    {
+     "file": "reaction.ogg",
+     "name": "Reaction"
+    },
+    {
+     "file": "receive.ogg",
+     "name": "Receive",
+     "role": "receive"
+    },
+    {
+     "file": "recording.ogg",
+     "name": "Recording"
+    },
+    {
+     "file": "redo.ogg",
+     "name": "Redo"
+    },
+    {
+     "file": "refund.ogg",
+     "name": "Refund"
+    },
+    {
+     "file": "release.ogg",
+     "name": "Release"
+    },
+    {
+     "file": "remove-from-cart.ogg",
+     "name": "Remove from cart"
+    },
+    {
+     "file": "reorder.ogg",
+     "name": "Reorder"
+    },
+    {
+     "file": "retry.ogg",
+     "name": "Retry"
+    },
+    {
+     "file": "reward.ogg",
+     "name": "Reward"
+    },
+    {
+     "file": "scanning.ogg",
+     "name": "Scanning"
+    },
+    {
+     "file": "seek.ogg",
+     "name": "Seek"
+    },
+    {
+     "file": "select.ogg",
+     "name": "Select",
+     "role": "select"
+    },
+    {
+     "file": "send.ogg",
+     "name": "Send",
+     "role": "send"
+    },
+    {
+     "file": "skip-next.ogg",
+     "name": "Skip next"
+    },
+    {
+     "file": "skip-previous.ogg",
+     "name": "Skip previous"
+    },
+    {
+     "file": "sleep.ogg",
+     "name": "Sleep"
+    },
+    {
+     "file": "snap.ogg",
+     "name": "Snap"
+    },
+    {
+     "file": "start.ogg",
+     "name": "Start"
+    },
+    {
+     "file": "stop.ogg",
+     "name": "Stop"
+    },
+    {
+     "file": "streak.ogg",
+     "name": "Streak"
+    },
+    {
+     "file": "streaming.ogg",
+     "name": "Streaming"
+    },
+    {
+     "file": "success.ogg",
+     "name": "Success",
+     "role": "success"
+    },
+    {
+     "file": "swipe.ogg",
+     "name": "Swipe",
+     "role": "swipe"
+    },
+    {
+     "file": "toggle-off.ogg",
+     "name": "Toggle off",
+     "role": "toggle-off"
+    },
+    {
+     "file": "toggle-on.ogg",
+     "name": "Toggle on",
+     "role": "toggle-on"
+    },
+    {
+     "file": "typing.ogg",
+     "name": "Typing",
+     "role": "typing"
+    },
+    {
+     "file": "uncheck.ogg",
+     "name": "Uncheck"
+    },
+    {
+     "file": "undo.ogg",
+     "name": "Undo"
+    },
+    {
+     "file": "unlock.ogg",
+     "name": "Unlock",
+     "role": "unlock"
+    },
+    {
+     "file": "volume-change.ogg",
+     "name": "Volume change"
+    },
+    {
+     "file": "wake.ogg",
+     "name": "Wake"
+    },
+    {
+     "file": "warning.ogg",
+     "name": "Warning",
+     "role": "warning"
+    }
+   ]
+  },
+  {
+   "id": "uisfx-cinematic",
+   "name": "uisfx Cinematic",
+   "by": "uisfx",
+   "about": "Deep impacts, polished tails, and quiet scale. Best for premium media, games, dramatic moments. 78 sounds made by a synthesizer.",
+   "license": "CC0 1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "source": "https://github.com/romainsimon/uisfx",
+   "credit": "uisfx Cinematic pack (github.com/romainsimon/uisfx), audio CC0 1.0.",
+   "shareAlike": false,
+   "pack": "Cinematic",
+   "sounds": [
+    {
+     "file": "achievement.ogg",
+     "name": "Achievement",
+     "role": "celebrate"
+    },
+    {
+     "file": "add-to-cart.ogg",
+     "name": "Add to cart"
+    },
+    {
+     "file": "back.ogg",
+     "name": "Back",
+     "role": "back"
+    },
+    {
+     "file": "badge.ogg",
+     "name": "Badge"
+    },
+    {
+     "file": "blocked.ogg",
+     "name": "Blocked"
+    },
+    {
+     "file": "bonus.ogg",
+     "name": "Bonus"
+    },
+    {
+     "file": "cancel.ogg",
+     "name": "Cancel",
+     "role": "cancel"
+    },
+    {
+     "file": "check.ogg",
+     "name": "Check",
+     "role": "select"
+    },
+    {
+     "file": "checkout.ogg",
+     "name": "Checkout"
+    },
+    {
+     "file": "checkpoint.ogg",
+     "name": "Checkpoint"
+    },
+    {
+     "file": "close.ogg",
+     "name": "Close",
+     "role": "close"
+    },
+    {
+     "file": "collapse.ogg",
+     "name": "Collapse"
+    },
+    {
+     "file": "complete.ogg",
+     "name": "Complete",
+     "role": "complete"
+    },
+    {
+     "file": "connect.ogg",
+     "name": "Connect",
+     "role": "connect"
+    },
+    {
+     "file": "connecting.ogg",
+     "name": "Connecting"
+    },
+    {
+     "file": "copy.ogg",
+     "name": "Copy"
+    },
+    {
+     "file": "coupon.ogg",
+     "name": "Coupon"
+    },
+    {
+     "file": "delete.ogg",
+     "name": "Delete",
+     "role": "delete"
+    },
+    {
+     "file": "deselect.ogg",
+     "name": "Deselect"
+    },
+    {
+     "file": "disconnect.ogg",
+     "name": "Disconnect",
+     "role": "disconnect"
+    },
+    {
+     "file": "double-click.ogg",
+     "name": "Double click"
+    },
+    {
+     "file": "drag-start.ogg",
+     "name": "Drag start"
+    },
+    {
+     "file": "drop.ogg",
+     "name": "Drop"
+    },
+    {
+     "file": "error.ogg",
+     "name": "Error",
+     "role": "error"
+    },
+    {
+     "file": "expand.ogg",
+     "name": "Expand"
+    },
+    {
+     "file": "focus.ogg",
+     "name": "Focus",
+     "role": "focus"
+    },
+    {
+     "file": "forward.ogg",
+     "name": "Forward"
+    },
+    {
+     "file": "hover.ogg",
+     "name": "Hover",
+     "role": "hover"
+    },
+    {
+     "file": "info.ogg",
+     "name": "Info"
+    },
+    {
+     "file": "invalid-drop.ogg",
+     "name": "Invalid drop"
+    },
+    {
+     "file": "level-up.ogg",
+     "name": "Level up",
+     "role": "celebrate"
+    },
+    {
+     "file": "loading.ogg",
+     "name": "Loading"
+    },
+    {
+     "file": "lock.ogg",
+     "name": "Lock",
+     "role": "lock"
+    },
+    {
+     "file": "long-press.ogg",
+     "name": "Long press"
+    },
+    {
+     "file": "mention.ogg",
+     "name": "Mention",
+     "role": "notification"
+    },
+    {
+     "file": "notification.ogg",
+     "name": "Notification",
+     "role": "notification"
+    },
+    {
+     "file": "open.ogg",
+     "name": "Open",
+     "role": "open"
+    },
+    {
+     "file": "paste.ogg",
+     "name": "Paste"
+    },
+    {
+     "file": "pause.ogg",
+     "name": "Pause"
+    },
+    {
+     "file": "play.ogg",
+     "name": "Play"
+    },
+    {
+     "file": "press.ogg",
+     "name": "Press",
+     "role": "tap"
+    },
+    {
+     "file": "processing.ogg",
+     "name": "Processing"
+    },
+    {
+     "file": "progress-step.ogg",
+     "name": "Progress step"
+    },
+    {
+     "file": "purchase.ogg",
+     "name": "Purchase"
+    },
+    {
+     "file": "queued.ogg",
+     "name": "Queued"
+    },
+    {
+     "file": "reaction.ogg",
+     "name": "Reaction"
+    },
+    {
+     "file": "receive.ogg",
+     "name": "Receive",
+     "role": "receive"
+    },
+    {
+     "file": "recording.ogg",
+     "name": "Recording"
+    },
+    {
+     "file": "redo.ogg",
+     "name": "Redo"
+    },
+    {
+     "file": "refund.ogg",
+     "name": "Refund"
+    },
+    {
+     "file": "release.ogg",
+     "name": "Release"
+    },
+    {
+     "file": "remove-from-cart.ogg",
+     "name": "Remove from cart"
+    },
+    {
+     "file": "reorder.ogg",
+     "name": "Reorder"
+    },
+    {
+     "file": "retry.ogg",
+     "name": "Retry"
+    },
+    {
+     "file": "reward.ogg",
+     "name": "Reward"
+    },
+    {
+     "file": "scanning.ogg",
+     "name": "Scanning"
+    },
+    {
+     "file": "seek.ogg",
+     "name": "Seek"
+    },
+    {
+     "file": "select.ogg",
+     "name": "Select",
+     "role": "select"
+    },
+    {
+     "file": "send.ogg",
+     "name": "Send",
+     "role": "send"
+    },
+    {
+     "file": "skip-next.ogg",
+     "name": "Skip next"
+    },
+    {
+     "file": "skip-previous.ogg",
+     "name": "Skip previous"
+    },
+    {
+     "file": "sleep.ogg",
+     "name": "Sleep"
+    },
+    {
+     "file": "snap.ogg",
+     "name": "Snap"
+    },
+    {
+     "file": "start.ogg",
+     "name": "Start"
+    },
+    {
+     "file": "stop.ogg",
+     "name": "Stop"
+    },
+    {
+     "file": "streak.ogg",
+     "name": "Streak"
+    },
+    {
+     "file": "streaming.ogg",
+     "name": "Streaming"
+    },
+    {
+     "file": "success.ogg",
+     "name": "Success",
+     "role": "success"
+    },
+    {
+     "file": "swipe.ogg",
+     "name": "Swipe",
+     "role": "swipe"
+    },
+    {
+     "file": "toggle-off.ogg",
+     "name": "Toggle off",
+     "role": "toggle-off"
+    },
+    {
+     "file": "toggle-on.ogg",
+     "name": "Toggle on",
+     "role": "toggle-on"
+    },
+    {
+     "file": "typing.ogg",
+     "name": "Typing",
+     "role": "typing"
+    },
+    {
+     "file": "uncheck.ogg",
+     "name": "Uncheck"
+    },
+    {
+     "file": "undo.ogg",
+     "name": "Undo"
+    },
+    {
+     "file": "unlock.ogg",
+     "name": "Unlock",
+     "role": "unlock"
+    },
+    {
+     "file": "volume-change.ogg",
+     "name": "Volume change"
+    },
+    {
+     "file": "wake.ogg",
+     "name": "Wake"
+    },
+    {
+     "file": "warning.ogg",
+     "name": "Warning",
+     "role": "warning"
+    }
+   ]
+  },
+  {
+   "id": "uisfx-studio",
+   "name": "uisfx Studio",
+   "by": "uisfx",
+   "about": "Tactile editing precision with warm cinematic restraint. Best for film, audio, and AI creative tools. 78 sounds made by a synthesizer.",
+   "license": "CC0 1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "source": "https://github.com/romainsimon/uisfx",
+   "credit": "uisfx Studio pack (github.com/romainsimon/uisfx), audio CC0 1.0.",
+   "shareAlike": false,
+   "pack": "Studio",
+   "sounds": [
+    {
+     "file": "achievement.ogg",
+     "name": "Achievement",
+     "role": "celebrate"
+    },
+    {
+     "file": "add-to-cart.ogg",
+     "name": "Add to cart"
+    },
+    {
+     "file": "back.ogg",
+     "name": "Back",
+     "role": "back"
+    },
+    {
+     "file": "badge.ogg",
+     "name": "Badge"
+    },
+    {
+     "file": "blocked.ogg",
+     "name": "Blocked"
+    },
+    {
+     "file": "bonus.ogg",
+     "name": "Bonus"
+    },
+    {
+     "file": "cancel.ogg",
+     "name": "Cancel",
+     "role": "cancel"
+    },
+    {
+     "file": "check.ogg",
+     "name": "Check",
+     "role": "select"
+    },
+    {
+     "file": "checkout.ogg",
+     "name": "Checkout"
+    },
+    {
+     "file": "checkpoint.ogg",
+     "name": "Checkpoint"
+    },
+    {
+     "file": "close.ogg",
+     "name": "Close",
+     "role": "close"
+    },
+    {
+     "file": "collapse.ogg",
+     "name": "Collapse"
+    },
+    {
+     "file": "complete.ogg",
+     "name": "Complete",
+     "role": "complete"
+    },
+    {
+     "file": "connect.ogg",
+     "name": "Connect",
+     "role": "connect"
+    },
+    {
+     "file": "connecting.ogg",
+     "name": "Connecting"
+    },
+    {
+     "file": "copy.ogg",
+     "name": "Copy"
+    },
+    {
+     "file": "coupon.ogg",
+     "name": "Coupon"
+    },
+    {
+     "file": "delete.ogg",
+     "name": "Delete",
+     "role": "delete"
+    },
+    {
+     "file": "deselect.ogg",
+     "name": "Deselect"
+    },
+    {
+     "file": "disconnect.ogg",
+     "name": "Disconnect",
+     "role": "disconnect"
+    },
+    {
+     "file": "double-click.ogg",
+     "name": "Double click"
+    },
+    {
+     "file": "drag-start.ogg",
+     "name": "Drag start"
+    },
+    {
+     "file": "drop.ogg",
+     "name": "Drop"
+    },
+    {
+     "file": "error.ogg",
+     "name": "Error",
+     "role": "error"
+    },
+    {
+     "file": "expand.ogg",
+     "name": "Expand"
+    },
+    {
+     "file": "focus.ogg",
+     "name": "Focus",
+     "role": "focus"
+    },
+    {
+     "file": "forward.ogg",
+     "name": "Forward"
+    },
+    {
+     "file": "hover.ogg",
+     "name": "Hover",
+     "role": "hover"
+    },
+    {
+     "file": "info.ogg",
+     "name": "Info"
+    },
+    {
+     "file": "invalid-drop.ogg",
+     "name": "Invalid drop"
+    },
+    {
+     "file": "level-up.ogg",
+     "name": "Level up",
+     "role": "celebrate"
+    },
+    {
+     "file": "loading.ogg",
+     "name": "Loading"
+    },
+    {
+     "file": "lock.ogg",
+     "name": "Lock",
+     "role": "lock"
+    },
+    {
+     "file": "long-press.ogg",
+     "name": "Long press"
+    },
+    {
+     "file": "mention.ogg",
+     "name": "Mention",
+     "role": "notification"
+    },
+    {
+     "file": "notification.ogg",
+     "name": "Notification",
+     "role": "notification"
+    },
+    {
+     "file": "open.ogg",
+     "name": "Open",
+     "role": "open"
+    },
+    {
+     "file": "paste.ogg",
+     "name": "Paste"
+    },
+    {
+     "file": "pause.ogg",
+     "name": "Pause"
+    },
+    {
+     "file": "play.ogg",
+     "name": "Play"
+    },
+    {
+     "file": "press.ogg",
+     "name": "Press",
+     "role": "tap"
+    },
+    {
+     "file": "processing.ogg",
+     "name": "Processing"
+    },
+    {
+     "file": "progress-step.ogg",
+     "name": "Progress step"
+    },
+    {
+     "file": "purchase.ogg",
+     "name": "Purchase"
+    },
+    {
+     "file": "queued.ogg",
+     "name": "Queued"
+    },
+    {
+     "file": "reaction.ogg",
+     "name": "Reaction"
+    },
+    {
+     "file": "receive.ogg",
+     "name": "Receive",
+     "role": "receive"
+    },
+    {
+     "file": "recording.ogg",
+     "name": "Recording"
+    },
+    {
+     "file": "redo.ogg",
+     "name": "Redo"
+    },
+    {
+     "file": "refund.ogg",
+     "name": "Refund"
+    },
+    {
+     "file": "release.ogg",
+     "name": "Release"
+    },
+    {
+     "file": "remove-from-cart.ogg",
+     "name": "Remove from cart"
+    },
+    {
+     "file": "reorder.ogg",
+     "name": "Reorder"
+    },
+    {
+     "file": "retry.ogg",
+     "name": "Retry"
+    },
+    {
+     "file": "reward.ogg",
+     "name": "Reward"
+    },
+    {
+     "file": "scanning.ogg",
+     "name": "Scanning"
+    },
+    {
+     "file": "seek.ogg",
+     "name": "Seek"
+    },
+    {
+     "file": "select.ogg",
+     "name": "Select",
+     "role": "select"
+    },
+    {
+     "file": "send.ogg",
+     "name": "Send",
+     "role": "send"
+    },
+    {
+     "file": "skip-next.ogg",
+     "name": "Skip next"
+    },
+    {
+     "file": "skip-previous.ogg",
+     "name": "Skip previous"
+    },
+    {
+     "file": "sleep.ogg",
+     "name": "Sleep"
+    },
+    {
+     "file": "snap.ogg",
+     "name": "Snap"
+    },
+    {
+     "file": "start.ogg",
+     "name": "Start"
+    },
+    {
+     "file": "stop.ogg",
+     "name": "Stop"
+    },
+    {
+     "file": "streak.ogg",
+     "name": "Streak"
+    },
+    {
+     "file": "streaming.ogg",
+     "name": "Streaming"
+    },
+    {
+     "file": "success.ogg",
+     "name": "Success",
+     "role": "success"
+    },
+    {
+     "file": "swipe.ogg",
+     "name": "Swipe",
+     "role": "swipe"
+    },
+    {
+     "file": "toggle-off.ogg",
+     "name": "Toggle off",
+     "role": "toggle-off"
+    },
+    {
+     "file": "toggle-on.ogg",
+     "name": "Toggle on",
+     "role": "toggle-on"
+    },
+    {
+     "file": "typing.ogg",
+     "name": "Typing",
+     "role": "typing"
+    },
+    {
+     "file": "uncheck.ogg",
+     "name": "Uncheck"
+    },
+    {
+     "file": "undo.ogg",
+     "name": "Undo"
+    },
+    {
+     "file": "unlock.ogg",
+     "name": "Unlock",
+     "role": "unlock"
+    },
+    {
+     "file": "volume-change.ogg",
+     "name": "Volume change"
+    },
+    {
+     "file": "wake.ogg",
+     "name": "Wake"
+    },
+    {
+     "file": "warning.ogg",
+     "name": "Warning",
+     "role": "warning"
+    }
+   ]
+  },
+  {
+   "id": "uisfx-zen",
+   "name": "uisfx Zen",
+   "by": "uisfx",
+   "about": "Pure tones, dry wood, and brief washi detail. Best for mindfulness, reading, writing, calm productivity. 78 sounds made by a synthesizer.",
+   "license": "CC0 1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "source": "https://github.com/romainsimon/uisfx",
+   "credit": "uisfx Zen pack (github.com/romainsimon/uisfx), audio CC0 1.0.",
+   "shareAlike": false,
+   "pack": "Zen",
+   "sounds": [
+    {
+     "file": "achievement.ogg",
+     "name": "Achievement",
+     "role": "celebrate"
+    },
+    {
+     "file": "add-to-cart.ogg",
+     "name": "Add to cart"
+    },
+    {
+     "file": "back.ogg",
+     "name": "Back",
+     "role": "back"
+    },
+    {
+     "file": "badge.ogg",
+     "name": "Badge"
+    },
+    {
+     "file": "blocked.ogg",
+     "name": "Blocked"
+    },
+    {
+     "file": "bonus.ogg",
+     "name": "Bonus"
+    },
+    {
+     "file": "cancel.ogg",
+     "name": "Cancel",
+     "role": "cancel"
+    },
+    {
+     "file": "check.ogg",
+     "name": "Check",
+     "role": "select"
+    },
+    {
+     "file": "checkout.ogg",
+     "name": "Checkout"
+    },
+    {
+     "file": "checkpoint.ogg",
+     "name": "Checkpoint"
+    },
+    {
+     "file": "close.ogg",
+     "name": "Close",
+     "role": "close"
+    },
+    {
+     "file": "collapse.ogg",
+     "name": "Collapse"
+    },
+    {
+     "file": "complete.ogg",
+     "name": "Complete",
+     "role": "complete"
+    },
+    {
+     "file": "connect.ogg",
+     "name": "Connect",
+     "role": "connect"
+    },
+    {
+     "file": "connecting.ogg",
+     "name": "Connecting"
+    },
+    {
+     "file": "copy.ogg",
+     "name": "Copy"
+    },
+    {
+     "file": "coupon.ogg",
+     "name": "Coupon"
+    },
+    {
+     "file": "delete.ogg",
+     "name": "Delete",
+     "role": "delete"
+    },
+    {
+     "file": "deselect.ogg",
+     "name": "Deselect"
+    },
+    {
+     "file": "disconnect.ogg",
+     "name": "Disconnect",
+     "role": "disconnect"
+    },
+    {
+     "file": "double-click.ogg",
+     "name": "Double click"
+    },
+    {
+     "file": "drag-start.ogg",
+     "name": "Drag start"
+    },
+    {
+     "file": "drop.ogg",
+     "name": "Drop"
+    },
+    {
+     "file": "error.ogg",
+     "name": "Error",
+     "role": "error"
+    },
+    {
+     "file": "expand.ogg",
+     "name": "Expand"
+    },
+    {
+     "file": "focus.ogg",
+     "name": "Focus",
+     "role": "focus"
+    },
+    {
+     "file": "forward.ogg",
+     "name": "Forward"
+    },
+    {
+     "file": "hover.ogg",
+     "name": "Hover",
+     "role": "hover"
+    },
+    {
+     "file": "info.ogg",
+     "name": "Info"
+    },
+    {
+     "file": "invalid-drop.ogg",
+     "name": "Invalid drop"
+    },
+    {
+     "file": "level-up.ogg",
+     "name": "Level up",
+     "role": "celebrate"
+    },
+    {
+     "file": "loading.ogg",
+     "name": "Loading"
+    },
+    {
+     "file": "lock.ogg",
+     "name": "Lock",
+     "role": "lock"
+    },
+    {
+     "file": "long-press.ogg",
+     "name": "Long press"
+    },
+    {
+     "file": "mention.ogg",
+     "name": "Mention",
+     "role": "notification"
+    },
+    {
+     "file": "notification.ogg",
+     "name": "Notification",
+     "role": "notification"
+    },
+    {
+     "file": "open.ogg",
+     "name": "Open",
+     "role": "open"
+    },
+    {
+     "file": "paste.ogg",
+     "name": "Paste"
+    },
+    {
+     "file": "pause.ogg",
+     "name": "Pause"
+    },
+    {
+     "file": "play.ogg",
+     "name": "Play"
+    },
+    {
+     "file": "press.ogg",
+     "name": "Press",
+     "role": "tap"
+    },
+    {
+     "file": "processing.ogg",
+     "name": "Processing"
+    },
+    {
+     "file": "progress-step.ogg",
+     "name": "Progress step"
+    },
+    {
+     "file": "purchase.ogg",
+     "name": "Purchase"
+    },
+    {
+     "file": "queued.ogg",
+     "name": "Queued"
+    },
+    {
+     "file": "reaction.ogg",
+     "name": "Reaction"
+    },
+    {
+     "file": "receive.ogg",
+     "name": "Receive",
+     "role": "receive"
+    },
+    {
+     "file": "recording.ogg",
+     "name": "Recording"
+    },
+    {
+     "file": "redo.ogg",
+     "name": "Redo"
+    },
+    {
+     "file": "refund.ogg",
+     "name": "Refund"
+    },
+    {
+     "file": "release.ogg",
+     "name": "Release"
+    },
+    {
+     "file": "remove-from-cart.ogg",
+     "name": "Remove from cart"
+    },
+    {
+     "file": "reorder.ogg",
+     "name": "Reorder"
+    },
+    {
+     "file": "retry.ogg",
+     "name": "Retry"
+    },
+    {
+     "file": "reward.ogg",
+     "name": "Reward"
+    },
+    {
+     "file": "scanning.ogg",
+     "name": "Scanning"
+    },
+    {
+     "file": "seek.ogg",
+     "name": "Seek"
+    },
+    {
+     "file": "select.ogg",
+     "name": "Select",
+     "role": "select"
+    },
+    {
+     "file": "send.ogg",
+     "name": "Send",
+     "role": "send"
+    },
+    {
+     "file": "skip-next.ogg",
+     "name": "Skip next"
+    },
+    {
+     "file": "skip-previous.ogg",
+     "name": "Skip previous"
+    },
+    {
+     "file": "sleep.ogg",
+     "name": "Sleep"
+    },
+    {
+     "file": "snap.ogg",
+     "name": "Snap"
+    },
+    {
+     "file": "start.ogg",
+     "name": "Start"
+    },
+    {
+     "file": "stop.ogg",
+     "name": "Stop"
+    },
+    {
+     "file": "streak.ogg",
+     "name": "Streak"
+    },
+    {
+     "file": "streaming.ogg",
+     "name": "Streaming"
+    },
+    {
+     "file": "success.ogg",
+     "name": "Success",
+     "role": "success"
+    },
+    {
+     "file": "swipe.ogg",
+     "name": "Swipe",
+     "role": "swipe"
+    },
+    {
+     "file": "toggle-off.ogg",
+     "name": "Toggle off",
+     "role": "toggle-off"
+    },
+    {
+     "file": "toggle-on.ogg",
+     "name": "Toggle on",
+     "role": "toggle-on"
+    },
+    {
+     "file": "typing.ogg",
+     "name": "Typing",
+     "role": "typing"
+    },
+    {
+     "file": "uncheck.ogg",
+     "name": "Uncheck"
+    },
+    {
+     "file": "undo.ogg",
+     "name": "Undo"
+    },
+    {
+     "file": "unlock.ogg",
+     "name": "Unlock",
+     "role": "unlock"
+    },
+    {
+     "file": "volume-change.ogg",
+     "name": "Volume change"
+    },
+    {
+     "file": "wake.ogg",
+     "name": "Wake"
+    },
+    {
+     "file": "warning.ogg",
+     "name": "Warning",
+     "role": "warning"
+    }
+   ]
+  }
+ ]
+}

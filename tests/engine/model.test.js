@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  basicSounds,
+  blankPatch,
   cleanName,
   LAYER_TYPES,
   layerDefaults,
@@ -12,7 +14,9 @@ import {
   presets,
   starterSounds,
   uniqueName,
+  variantOf,
 } from '../../src/engine/model.js';
+import { ROLES, soundsForRole } from '../../src/engine/roles.js';
 
 const withoutRandom = ({ id, seed, ...rest }) => rest;
 
@@ -105,6 +109,11 @@ describe('normalizePatch', () => {
     expect(Object.keys(master).sort()).toEqual(Object.keys(masterDefaults()).sort());
   });
 
+  it('keeps the mark for a sound that clashes on purpose only when it is true', () => {
+    expect(normalizePatch({ layers: [], tension: true }).tension).toBe(true);
+    for (const tension of [false, 'yes', 1, null]) expect(normalizePatch({ layers: [], tension })).not.toHaveProperty('tension');
+  });
+
   it('drops invalid layers and keeps at most MAX_LAYERS', () => {
     expect(normalizePatch({ layers: [{ type: 'tone' }, { type: 'bogus' }, null, 'noise'] }).layers).toHaveLength(1);
     const layers = Array.from({ length: MAX_LAYERS + 36 }, () => ({ type: 'noise' }));
@@ -175,13 +184,66 @@ describe.each([
 });
 
 describe('starterSounds', () => {
-  it('covers eight roles with unique names', () => {
-    expect(starterSounds().map((p) => p.name)).toEqual(['Tap', 'Toggle on', 'Toggle off', 'Send', 'Receive', 'Success', 'Error', 'Notification']);
+  const sounds = starterSounds();
+  const set = { sounds, roles: {} };
+
+  it('has a sound for every interaction but hover, which most products keep silent', () => {
+    expect(ROLES.filter((r) => !soundsForRole(set, r.id).length).map((r) => r.id)).toEqual(['hover']);
+    expect(new Set(sounds.map((p) => p.name)).size).toBe(sounds.length);
+  });
+
+  it('ships takes of the sounds heard most, so they never repeat exactly', () => {
+    expect(soundsForRole(set, 'tap').map((p) => p.name)).toEqual(['Tap', 'Tap 2', 'Tap 3']);
+    expect(soundsForRole(set, 'typing').map((p) => p.name)).toEqual(['Typing', 'Typing 2', 'Typing 3', 'Typing 4']);
+  });
+
+  it('starts with the original eight, which also make the basics', () => {
+    const basics = ['Tap', 'Toggle on', 'Toggle off', 'Send', 'Receive', 'Success', 'Error', 'Notification'];
+    expect(basicSounds().map((p) => p.name)).toEqual(basics);
+    expect(sounds[0].name).toBe('Tap');
+  });
+});
+
+describe('variantOf', () => {
+  const [tap] = starterSounds();
+
+  it('makes another take, named after the sound, with fresh ids and noise', () => {
+    const v = variantOf(tap, 1);
+    expect(v.name).toBe('Tap 2');
+    expect(variantOf({ ...tap, name: 'Tap 2' }, 2).name).toBe('Tap 3');
+    expect(v.id).not.toBe(tap.id);
+    expect(v.layers.map((L) => L.id)).not.toEqual(tap.layers.map((L) => L.id));
+    expect(v.layers[1].seed).not.toBe(tap.layers[1].seed);
+  });
+
+  it('stays within a few cents of every note, and close in length and tone', () => {
+    for (let n = 1; n < 20; n++) {
+      const v = variantOf(tap, n);
+      const cents = 1200 * Math.log2(v.layers[0].pitchEnd / tap.layers[0].pitchEnd);
+      expect(Math.abs(cents)).toBeLessThanOrEqual(12);
+      expect(v.layers[0].pitchStart / v.layers[0].pitchEnd).toBeCloseTo(tap.layers[0].pitchStart / tap.layers[0].pitchEnd, 9);
+      expect(v.layers[0].decay / tap.layers[0].decay).toBeGreaterThan(0.87);
+      expect(v.layers[0].decay / tap.layers[0].decay).toBeLessThan(1.13);
+    }
+  });
+
+  it('gives the same take for the same sound and number', () => {
+    const strip = (p) => p.layers.map(({ id, seed, ...rest }) => rest);
+    expect(strip(variantOf(tap, 3))).toEqual(strip(variantOf(tap, 3)));
+    expect(strip(variantOf(tap, 3))).not.toEqual(strip(variantOf(tap, 4)));
+  });
+
+  it('moves a recording by cents, in semitones', () => {
+    const rec = { ...blankPatch('Knock'), layers: [{ ...layerDefaults('sample'), pitch: 2, slideTo: 2 }] };
+    const [L] = variantOf(rec, 1).layers;
+    expect(Math.abs(L.pitch - 2)).toBeLessThanOrEqual(0.12);
+    expect(L.slideTo).toBe(L.pitch);
   });
 });
 
 describe('oppositePatch', () => {
-  const [tap, toggleOn, , send] = starterSounds();
+  const byName = (name) => starterSounds().find((p) => p.name === name);
+  const [tap, toggleOn, send] = ['Tap', 'Toggle on', 'Send'].map(byName);
 
   it('mirrors pitched layers in time and leaves the click where it was', () => {
     const off = oppositePatch(toggleOn);

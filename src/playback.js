@@ -1,6 +1,6 @@
 import { renderPatch, renderWithLayers } from './engine/render.js';
 import { layerDefaults, masterDefaults } from './engine/model.js';
-import { ROLE_IDS, SCENE, soundForRole } from './engine/roles.js';
+import { ROLE_IDS, SCENE, soundsForRole } from './engine/roles.js';
 import { PREVIEW_SR, samples, sampleToBufferSafe } from './engine/playable.js';
 import { currentSound, showToast, useStore } from './store.js';
 
@@ -186,10 +186,18 @@ export function renderCached(patch) {
 
 export function warmRoles() {
   const ws = useStore.getState().ws;
-  for (const id of ROLE_IDS) {
-    const sound = soundForRole(ws, id);
-    if (sound) renderCached(sound).catch(() => {});
-  }
+  for (const id of ROLE_IDS) for (const sound of soundsForRole(ws, id)) renderCached(sound).catch(() => {});
+}
+
+// One of an interaction's variants at random, never the one it played last time, so a sound heard
+// over and over never repeats exactly.
+const lastVariant = new Map();
+function pickVariant(roleId, sounds) {
+  if (sounds.length < 2) return sounds[0] || null;
+  const fresh = sounds.filter((s) => s.id !== lastVariant.get(roleId));
+  const sound = fresh[Math.floor(Math.random() * fresh.length)];
+  lastVariant.set(roleId, sound.id);
+  return sound;
 }
 
 const roleListeners = new Set();
@@ -198,15 +206,38 @@ export function onRolePlayed(fn) {
   return () => roleListeners.delete(fn);
 }
 
+// Plays one of the interaction's sounds and resolves to how long it lasts, in seconds (0 for silence).
 export async function playRole(roleId) {
-  const sound = soundForRole(useStore.getState().ws, roleId);
+  const sound = pickVariant(roleId, soundsForRole(useStore.getState().ws, roleId));
   roleListeners.forEach((fn) => fn({ roleId, sound }));
-  if (!sound) return;
+  if (!sound) return 0;
   try {
-    playResult(await renderCached(sound), { variation: sound.master.variation });
+    const res = await renderCached(sound);
+    playResult(res, { variation: sound.master.variation });
+    return res.duration;
   } catch (e) {
     console.error(e);
+    return 0;
   }
+}
+
+// The pause between two cycles of a looping interaction, such as a ring.
+const LOOP_GAP_S = 0.8;
+const SILENT_LOOP_S = 1;
+
+// Plays an interaction again and again, as a phone rings, until the returned function is called.
+export function loopRole(roleId) {
+  let timer = 0;
+  let stopped = false;
+  const cycle = async () => {
+    const seconds = await playRole(roleId);
+    if (!stopped) timer = setTimeout(cycle, ((seconds || SILENT_LOOP_S) + LOOP_GAP_S) * 1000);
+  };
+  cycle();
+  return () => {
+    stopped = true;
+    clearTimeout(timer);
+  };
 }
 
 const SCENE_GAP_S = 0.35;
@@ -215,7 +246,7 @@ export async function playScene() {
   const c = audioCtx();
   if (!c) return;
   const ws = useStore.getState().ws;
-  const steps = SCENE.map((roleId) => ({ roleId, sound: soundForRole(ws, roleId) })).filter((x) => x.sound);
+  const steps = SCENE.map((roleId) => ({ roleId, sound: pickVariant(roleId, soundsForRole(ws, roleId)) })).filter((x) => x.sound);
   if (!steps.length) {
     showToast('Pick sounds for tap, send, receive or success to hear the scene.');
     return;

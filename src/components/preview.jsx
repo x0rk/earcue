@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Maximize2, Minimize2, Music2, Play, X } from 'lucide-react';
-import { ROLES, roleLabel, soundForRole } from '../engine/roles.js';
+import { MAX_VARIANTS, ROLE_GROUPS, ROLES, roleLabel, soundsForRole } from '../engine/roles.js';
 import { onRolePlayed, playRole, playScene, warmRoles } from '../playback.js';
 import { setPreview, setPreviewWidth, setRole, useStore } from '../store.js';
-import { Button, IconButton, Segmented, Select } from './ui.jsx';
+import { Button, IconButton, PickMany, Segmented } from './ui.jsx';
 import { KitShowcase } from './kit.jsx';
 
 // The preview sits beside the editor only when both fit; below this width it opens full screen.
@@ -79,34 +79,57 @@ function Splitter({ width }) {
   );
 }
 
+const summaryOf = (sounds) => (!sounds.length ? 'Silent' : sounds.length === 1 ? sounds[0].name : `${sounds[0].name} +${sounds.length - 1}`);
+
+function RoleRow({ role, ws }) {
+  const sounds = soundsForRole(ws, role.id);
+  const ids = sounds.map((s) => s.id);
+  const toggle = (id, on) => {
+    const next = on ? [...ids, id] : ids.filter((x) => x !== id);
+    setRole(role.id, next.length ? next : null);
+  };
+  return (
+    <li className="flex items-center gap-2 rounded-lg px-1.5 py-1.5 hover:bg-field">
+      <div className="min-w-0 flex-1">
+        <p className="text-[12.5px] font-medium text-ink">
+          {role.label}
+          {role.loop && <span className="ml-1.5 rounded bg-field px-1 py-px text-[10.5px] font-normal text-muted">Loops</span>}
+        </p>
+        <p className="text-[11.5px] leading-snug text-muted">{role.hint}</p>
+      </div>
+      <PickMany
+        label={`Sounds for ${role.label}`}
+        summary={summaryOf(sounds)}
+        className="w-[132px]"
+        selected={ids}
+        items={ws.sounds.map((s) => ({ value: s.id, label: s.name, disabled: !ids.includes(s.id) && ids.length >= MAX_VARIANTS }))}
+        onToggle={toggle}
+        actions={[{ label: 'Silent', onSelect: () => setRole(role.id, null) }]}
+      />
+      <IconButton label={`Play the ${role.label} sound`} size="iconSm" disabled={!sounds.length} onClick={() => playRole(role.id)}>
+        <Play className="!size-3.5" />
+      </IconButton>
+    </li>
+  );
+}
+
 function RoleMap() {
   const ws = useStore((s) => s.ws);
-  const groups = [
-    { items: [{ value: 'none', label: 'Silent' }] },
-    { label: 'Sounds in this set', items: ws.sounds.map((s) => ({ value: s.id, label: s.name })) },
-  ];
   return (
     <div className="flex flex-col gap-1 p-2">
       <p className="px-1.5 pb-1 pt-1 text-[12px] text-muted">
-        Pick the sound each interaction plays. Until you pick one, it uses the sound with the same name.
+        Pick the sounds each interaction plays. With more than one, it plays one of them at random, never the same twice in a row. Until you pick, it uses the sound with the same name and its numbered takes, like Tap 2.
       </p>
-      <ul className="flex flex-col gap-0.5">
-        {ROLES.map((r) => {
-          const sound = soundForRole(ws, r.id);
-          return (
-            <li key={r.id} className="flex items-center gap-2 rounded-lg px-1.5 py-1.5 hover:bg-field">
-              <div className="min-w-0 flex-1">
-                <p className="text-[12.5px] font-medium text-ink">{r.label}</p>
-                <p className="text-[11.5px] leading-snug text-muted">{r.hint}</p>
-              </div>
-              <Select label={`Sound for ${r.label}`} size="sm" className="w-[132px]" value={sound ? sound.id : 'none'} groups={groups} onChange={(v) => setRole(r.id, v === 'none' ? null : v)} />
-              <IconButton label={`Play the ${r.label} sound`} size="iconSm" disabled={!sound} onClick={() => playRole(r.id)}>
-                <Play className="!size-3.5" />
-              </IconButton>
-            </li>
-          );
-        })}
-      </ul>
+      {ROLE_GROUPS.map((g) => (
+        <section key={g.id} aria-label={g.label}>
+          <h3 className="px-1.5 pb-0.5 pt-2.5 text-[11px] font-medium text-muted">{g.label}</h3>
+          <ul className="flex flex-col gap-0.5">
+            {ROLES.filter((r) => r.group === g.id).map((r) => (
+              <RoleRow key={r.id} role={r} ws={ws} />
+            ))}
+          </ul>
+        </section>
+      ))}
     </div>
   );
 }

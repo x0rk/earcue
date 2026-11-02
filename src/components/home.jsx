@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
 import { RadioGroup } from 'radix-ui';
-import { Copy, MoreHorizontal, Pencil, Play, Plus, Trash2, Upload } from 'lucide-react';
+import { Copy, FolderOpen, MoreHorizontal, Pencil, Play, Plus, Trash2, Upload } from 'lucide-react';
 import { APP_NAME } from '../brand.js';
 import { MAX_NAME, uniqueName } from '../engine/model.js';
 import { loadSamples } from '../engine/samples.js';
+import { ROLE_IDS, roleLabel } from '../engine/roles.js';
 import { pickSetFiles } from '../io.js';
+import { loadKits, openKit, playKitSound } from '../kits.js';
 import { previewPatch } from '../playback.js';
 import { closeDialog, createSet, deleteSet, duplicateSet, openDialog, openSet, readSet, refreshSets, renameSet, useStore } from '../store.js';
-import { Button, Dialog, EditableText, Menu } from './ui.jsx';
+import { Button, Dialog, EditableText, Menu, Select } from './ui.jsx';
 import { LogoMark } from './icons.jsx';
 import { ThemeButton } from './top-bar.jsx';
 
@@ -97,11 +99,122 @@ function SetCard({ set }) {
 const STARTS = [
   {
     value: 'starter',
+    title: 'Every interaction',
+    body: 'A sound for each of the 28 interactions most product sound kits cover, with several takes of tap and typing. All in one key.',
+  },
+  {
+    value: 'basics',
     title: 'The basics',
-    body: 'Tap, toggle on and off, send, receive, success, error and notification, made to fit together.',
+    body: 'Tap, toggle on and off, send, receive, success, error and notification.',
   },
   { value: 'blank', title: 'One blank sound', body: 'A single tone to build your own set from.' },
 ];
+
+// A kit card's chips play one sound for each interaction the kit covers, in the preview's order, so
+// kits compare at a glance.
+function kitChips(kit) {
+  const byRole = ROLE_IDS.map((id) => kit.sounds.find((s) => s.role === id)).filter(Boolean);
+  const rest = kit.sounds.filter((s) => !s.role);
+  return [...byRole.map((s) => ({ sound: s, label: roleLabel(s.role) })), ...rest.map((s) => ({ sound: s, label: s.name }))].slice(0, MAX_CHIPS);
+}
+
+function KitCard({ kits }) {
+  const [id, setId] = useState(kits[0].id);
+  const [loading, setLoading] = useState(null);
+  const kit = kits.find((k) => k.id === id) || kits[0];
+  const open = async () => {
+    setLoading({ done: 0, total: kit.sounds.length });
+    try {
+      await openKit(kit, (done, total) => setLoading({ done, total }));
+    } finally {
+      setLoading(null);
+    }
+  };
+  const chips = kitChips(kit);
+  const extra = kit.sounds.length - chips.length;
+  return (
+    <div className="flex h-full min-h-[164px] flex-col gap-3 rounded-2xl border border-line bg-panel p-4">
+      <div className="flex items-start gap-2">
+        <div className="min-w-0 flex-1">
+          <h3 className="truncate text-[15px] font-semibold tracking-tight">{kits.length > 1 ? kit.name.replace(` ${kit.pack}`, '') : kit.name}</h3>
+          <p className="mt-0.5 text-[12px] text-muted">
+            {kit.by} ·{' '}
+            <a href={kit.licenseUrl} target="_blank" rel="noreferrer" className="underline decoration-line-strong underline-offset-2 hover:text-ink">
+              {kit.license}
+            </a>
+          </p>
+        </div>
+        {kits.length > 1 && (
+          <Select label={`${kit.name.replace(` ${kit.pack}`, '')} pack`} size="sm" className="w-[118px]" value={kit.id} onChange={setId} groups={[{ items: kits.map((k) => ({ value: k.id, label: k.pack })) }]} />
+        )}
+      </div>
+      <p className="text-[12.5px] leading-snug text-muted">{kit.about}</p>
+      <ul className="mt-auto flex flex-wrap gap-1.5" aria-label={`Sounds in ${kit.name}`}>
+        {chips.map(({ sound, label }) => (
+          <li key={sound.file}>
+            <button
+              type="button"
+              className="inline-flex h-7 max-w-[160px] items-center gap-1.5 rounded-full bg-field px-2.5 text-[12px] text-ink hover:bg-field-hover"
+              aria-label={`Play ${label} from ${kit.name}`}
+              title={sound.name}
+              onClick={() => playKitSound(kit, sound)}
+            >
+              <Play className="size-2.5 shrink-0 fill-current text-muted" />
+              <span className="truncate">{label}</span>
+            </button>
+          </li>
+        ))}
+        {extra > 0 && <li className="flex h-7 items-center px-1 text-[12px] text-muted">+{extra} more</li>}
+      </ul>
+      <div className="flex items-center justify-between gap-2 border-t border-line pt-3">
+        <span className="text-[12px] text-muted">{kit.sounds.length} sounds</span>
+        <Button variant="secondary" size="sm" disabled={!!loading} onClick={open} aria-label={`Open ${kit.name} as a set`}>
+          <FolderOpen />
+          {loading ? `Loading ${loading.done} of ${loading.total}` : 'Open as a set'}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// Kits that share a pack name are one source in several styles, so they share a card.
+function groupKits(kits) {
+  const groups = new Map();
+  for (const kit of kits) {
+    const key = kit.pack ? kit.name.replace(` ${kit.pack}`, '') : kit.id;
+    groups.set(key, [...(groups.get(key) || []), kit]);
+  }
+  return [...groups.values()];
+}
+
+function KitsSection() {
+  const [kits, setKits] = useState([]);
+  useEffect(() => {
+    let live = true;
+    loadKits().then((list) => live && setKits(list));
+    return () => {
+      live = false;
+    };
+  }, []);
+  if (!kits.length) return null;
+  return (
+    <section className="mt-12" aria-labelledby="kits-title">
+      <h2 id="kits-title" className="text-[17px] font-semibold tracking-tight">
+        Kits to explore
+      </h2>
+      <p className="mt-1 max-w-[640px] text-[13.5px] text-muted">
+        Openly licensed UI sounds from design systems and sound packs. Play them here, or open one as a set to change and export. A set made from a kit keeps its credit, and exports carry it.
+      </p>
+      <ul className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-label="Kits">
+        {groupKits(kits).map((group) => (
+          <li key={group[0].id}>
+            <KitCard kits={group} />
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
 
 function NewSetDialog() {
   const open = useStore((s) => s.dialog === 'new-set');
@@ -260,6 +373,7 @@ export function Home() {
             </li>
           ))}
         </ul>
+        <KitsSection />
       </main>
       <NewSetDialog />
       <DeleteSetDialog />

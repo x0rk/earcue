@@ -1,3 +1,4 @@
+import { AudioScheduledSourceNode, OfflineAudioContext } from 'node-web-audio-api';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { APP_NAME } from '../../src/brand.js';
 import { encodeWav, makeZip, moduleSource, readme, readPatchFile, setModuleSource, setReadme, slug } from '../../src/engine/export.js';
@@ -255,6 +256,51 @@ describe('setModuleSource', () => {
     const { playSound } = await importSource(setModuleSource(rendered(['tap'])));
     expect(() => playSound('toString', {})).toThrow('Unknown sound');
   });
+
+  it('has no interaction player when the set maps no interactions', async () => {
+    const src = setModuleSource(rendered(['tap']));
+    expect(src).not.toContain('ROLES');
+    expect((await importSource(src)).playRole).toBeUndefined();
+  });
+});
+
+describe('setModuleSource with interactions', () => {
+  // Each take lasts a different time, so the length playRole returns says which one played.
+  const takes = [0.1, 0.2, 0.3].map((duration, i) => ({ patch: blankPatch('Tap'), res: { gain: 0.5, duration }, base: i ? `tap-${i + 1}` : 'tap' }));
+  const send = { patch: blankPatch('Send'), res: { gain: 0.5, duration: 0.4 }, base: 'send' };
+  const roles = { tap: takes.map((t) => t.patch.id), send: [send.patch.id], error: ['gone'] };
+  const ctx = () => new OfflineAudioContext(1, 48000, 48000);
+
+  it('plays one of an interaction\'s takes at random, never the same one twice in a row', async () => {
+    const { playRole, roleNames } = await importSource(setModuleSource([...takes, send], { roles }));
+    expect(roleNames).toEqual(['tap', 'send']);
+    const c = ctx();
+    const played = Array.from({ length: 30 }, () => playRole('tap', c));
+    expect(new Set(played)).toEqual(new Set([0.1, 0.2, 0.3]));
+    for (let i = 1; i < played.length; i++) expect(played[i]).not.toBe(played[i - 1]);
+    expect(playRole('send', c)).toBe(0.4);
+    expect(() => playRole('hasOwnProperty', c)).toThrow('Unknown interaction "hasOwnProperty". Available: tap, send');
+  });
+
+  it('loops an interaction until it is stopped', async () => {
+    vi.useFakeTimers();
+    try {
+      const { loopRole } = await importSource(setModuleSource([send], { roles: { ring: [send.patch.id] } }));
+      const c = ctx();
+      const start = vi.spyOn(AudioScheduledSourceNode.prototype, 'start');
+      const stop = loopRole('ring', c, { gap: 0.6 });
+      const once = start.mock.calls.length;
+      expect(once).toBeGreaterThan(0);
+      vi.advanceTimersByTime(1000);
+      expect(start.mock.calls.length).toBe(once * 2);
+      stop();
+      vi.advanceTimersByTime(5000);
+      expect(start.mock.calls.length).toBe(once * 2);
+    } finally {
+      vi.useRealTimers();
+      vi.restoreAllMocks();
+    }
+  });
 });
 
 describe('code export audio', () => {
@@ -284,6 +330,18 @@ describe('readmes', () => {
     expect(many).toContain('ogg/ ');
     expect(many).toContain('Ogg Vorbis');
     expect(many).not.toContain('-bit WAV');
+  });
+
+  it('list the interactions and the credits a set carries', () => {
+    const tap2 = blankPatch('Tap 2');
+    const two = [...set, { patch: tap2, res: { duration: 0.1 }, base: 'tap-2' }];
+    const text = setReadme(two, ogg, 'all', { roles: { tap: [tap.id, tap2.id], ring: [tap.id] }, loops: ['ring'], credits: ['Material Design product sounds by Google, CC BY 4.0.'] });
+    expect(text).toContain('  tap            tap, tap-2\n');
+    expect(text).toContain('  ring           tap  (repeats until stopped)');
+    expect(text).toContain('Credits:\n  Material Design product sounds by Google, CC BY 4.0.\n  Trimmed and processed in');
+    expect(readme(tap, 'tap', { ...ogg, ms: 120, credits: ['Kenney, CC0 1.0.'] })).toContain('Credits:\n  Kenney, CC0 1.0.');
+    expect(setReadme(set, ogg, 'all')).not.toContain('Credits');
+    expect(setReadme(set, ogg, 'all')).not.toContain('Interactions');
   });
 
   it('describe WAV files for a WAV export', () => {

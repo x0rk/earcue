@@ -387,6 +387,55 @@ export function Menu({ trigger, items, align = 'end' }) {
   );
 }
 
+// ---------- pick many ----------
+// A select that can hold several values: items are checkboxes, and the menu stays open while you tick
+// them. actions sit above the list, such as an option that clears it.
+export function PickMany({ label, summary, items, selected, onToggle, actions = [], className }) {
+  return (
+    <DropdownMenu.Root>
+      <DropdownMenu.Trigger asChild>
+        <button
+          type="button"
+          aria-label={label}
+          className={cx('inline-flex h-7 min-w-0 items-center justify-between gap-2 rounded-lg bg-field px-2.5 text-[12px] text-ink hover:bg-field-hover', className)}
+        >
+          <span className="truncate">{summary}</span>
+          <ChevronDown className="size-3.5 shrink-0 text-muted" />
+        </button>
+      </DropdownMenu.Trigger>
+      <DropdownMenu.Portal>
+        <DropdownMenu.Content
+          align="end"
+          sideOffset={6}
+          className="z-50 max-h-[min(420px,var(--radix-dropdown-menu-content-available-height))] min-w-[200px] overflow-y-auto rounded-xl border border-line-strong bg-panel p-1 shadow-pop animate-pop-in"
+        >
+          {actions.map((it) => (
+            <DropdownMenu.Item key={it.label} onSelect={it.onSelect} className="flex h-8 select-none items-center rounded-md pl-7 pr-2 text-[13px] text-ink outline-none data-[highlighted]:bg-field">
+              {it.label}
+            </DropdownMenu.Item>
+          ))}
+          {actions.length > 0 && <DropdownMenu.Separator className="my-1 h-px bg-line" />}
+          {items.map((it) => (
+            <DropdownMenu.CheckboxItem
+              key={it.value}
+              checked={selected.includes(it.value)}
+              disabled={it.disabled}
+              onCheckedChange={(on) => onToggle(it.value, on)}
+              onSelect={(e) => e.preventDefault()}
+              className="relative flex h-8 select-none items-center rounded-md pl-7 pr-2 text-[13px] text-ink outline-none data-[disabled]:opacity-40 data-[highlighted]:bg-field"
+            >
+              <DropdownMenu.ItemIndicator className="absolute left-2">
+                <Check className="size-3.5" />
+              </DropdownMenu.ItemIndicator>
+              <span className="truncate">{it.label}</span>
+            </DropdownMenu.CheckboxItem>
+          ))}
+        </DropdownMenu.Content>
+      </DropdownMenu.Portal>
+    </DropdownMenu.Root>
+  );
+}
+
 // ---------- dialog ----------
 export function Dialog({ open, onOpenChange, title, description, children, width = 480, footer }) {
   // These dialogs open from app state rather than a Radix trigger, so Radix can't know where focus

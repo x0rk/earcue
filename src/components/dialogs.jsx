@@ -2,13 +2,15 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Collapsible, RadioGroup } from 'radix-ui';
 import { ChevronDown, Code2, FileAudio, FolderArchive, Mic, Package, Play, Plus, Square } from 'lucide-react';
 import { REPO_URL } from '../brand.js';
-import { presets, starterSounds } from '../engine/model.js';
+import { LOUDNESS_RANGE, presets, starterSounds } from '../engine/model.js';
+import { describeKey, SCALES, TIER_LABEL, tierOf, widerKey } from '../engine/palette.js';
 import { decodeToSample, storeSample } from '../engine/samples.js';
 import { slug } from '../engine/export.js';
 import { exportSound } from '../io.js';
+import { NOTE_NAMES } from '../lib/format.js';
 import { audioCtx, previewPatch, results } from '../playback.js';
-import { addSampleLayer, addSound, closeDialog, currentSound, newBlankSound, setPref, showToast, useStore } from '../store.js';
-import { Button, Dialog, Kbd, Segmented, Select, SwitchRow } from './ui.jsx';
+import { addSampleLayer, addSound, changeKey, closeDialog, currentSound, newBlankSound, setLoudness, setPref, shareRoom, showToast, useStore } from '../store.js';
+import { Button, Dialog, Kbd, Scrub, Segmented, Select, SwitchRow } from './ui.jsx';
 
 function useDialog(name) {
   const open = useStore((s) => s.dialog === name);
@@ -99,6 +101,7 @@ export function ExportDialog() {
   const P = useStore((s) => currentSound(s));
   const sounds = useStore((s) => s.ws.sounds);
   const soundSetName = useStore((s) => s.ws.name);
+  const credits = useStore((s) => s.ws.credits);
   const count = sounds.length;
   const [scope, setScope] = useState('sound');
   const [what, setWhat] = useState('audio');
@@ -207,6 +210,11 @@ export function ExportDialog() {
             />
             <p className="pl-[76px] text-[12px] text-muted">{FORMAT_NOTE[format]}</p>
           </div>
+        )}
+        {credits.length > 0 && (
+          <p className="text-[12px] text-muted">
+            This set uses recordings from {credits.join(' ')} Zip exports carry the credit in their README. When you share a single file, credit it yourself.
+          </p>
         )}
         {keepsClips && <p className="text-[12px] text-muted">Project files keep each recording whole, trimmed parts included, so you can change the trims later. Code exports include only the part that plays.</p>}
         <label className="flex items-center gap-2 text-[12.5px] text-muted">
@@ -416,6 +424,119 @@ export function RecordDialog() {
             />
           </div>
         )}
+      </div>
+    </Dialog>
+  );
+}
+
+// ---------- palette ----------
+const capitalized = (s) => s[0].toUpperCase() + s.slice(1);
+const ROOT_ITEMS = NOTE_NAMES.map((n, i) => ({ value: String(i), label: n }));
+const SCALE_ITEMS = [{ value: 'none', label: 'No key' }, ...Object.entries(SCALES).map(([value, s]) => ({ value, label: capitalized(s.label) }))];
+const sameKey = (a, b) => (a && b ? a.root === b.root && a.scale === b.scale : a === b);
+
+function PalettePart({ title, intro, children }) {
+  return (
+    <section className="flex flex-col gap-2">
+      <div>
+        <h3 className="text-[13px] font-semibold text-ink">{title}</h3>
+        <p className="mt-0.5 text-[12.5px] text-muted">{intro}</p>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function KeyPart() {
+  const current = useStore((s) => s.ws.key);
+  const [root, setRoot] = useState(current?.root ?? 0);
+  const [scale, setScale] = useState(current?.scale ?? 'none');
+  const [retune, setRetune] = useState(true);
+  const draft = scale === 'none' ? null : { root, scale };
+  const wider = draft && widerKey(draft);
+  return (
+    <PalettePart
+      title="Key"
+      intro={draft ? `Notes in ${describeKey(draft)} sound right together${wider ? `, and so do the other notes of ${describeKey(wider)}` : ''}. The Checks tab flags the rest.` : 'With no key, the notes in the set are not checked.'}
+    >
+      <div className="flex gap-2">
+        {draft && <Select label="Key note" className="w-[84px]" value={String(root)} groups={[{ items: ROOT_ITEMS }]} onChange={(v) => setRoot(Number(v))} />}
+        <Select label="Scale" className="flex-1" value={scale} groups={[{ items: SCALE_ITEMS }]} onChange={setScale} />
+      </div>
+      {draft && (
+        <SwitchRow
+          label="Move the notes into the new key"
+          checked={retune}
+          onChange={setRetune}
+          hint="Each note keeps its place in the scale, so a tune keeps its shape, and a clash on purpose stays a clash. Noise and recordings with no clear pitch stay as they are. Turn it off to change only what Checks compares against."
+        />
+      )}
+      <Button variant="primary" size="sm" className="self-end" disabled={sameKey(draft, current)} onClick={() => changeKey(draft, { retune })}>
+        {!draft && current ? 'Remove the key' : current ? 'Change key' : 'Use this key'}
+      </Button>
+    </PalettePart>
+  );
+}
+
+function LoudnessPart() {
+  const ws = useStore((s) => s.ws);
+  const [levels, setLevels] = useState(ws.loudness);
+  return (
+    <PalettePart title="Loudness" intro="Sounds that play often sit lowest and alerts highest. Each sound takes the level of the interactions it plays for.">
+      {Object.keys(TIER_LABEL).map((tier) => (
+        <div key={tier}>
+          <Scrub label={TIER_LABEL[tier]} value={levels[tier]} min={LOUDNESS_RANGE[0]} max={LOUDNESS_RANGE[1]} step={0.5} digits={1} unit="dBFS" onChange={(v) => setLevels({ ...levels, [tier]: v })} />
+          <p className="truncate px-2.5 pt-1 text-[11.5px] text-muted">
+            {ws.sounds
+              .filter((p) => tierOf(ws, p.id) === tier)
+              .map((p) => p.name)
+              .join(', ') || 'No sound plays for these yet.'}
+          </p>
+        </div>
+      ))}
+      <Button size="sm" className="self-end" onClick={() => setLoudness(levels)}>
+        Set loudness by role
+      </Button>
+    </PalettePart>
+  );
+}
+
+function RoomPart() {
+  const ws = useStore((s) => s.ws);
+  const [from, setFrom] = useState(ws.current);
+  const src = ws.sounds.find((p) => p.id === from) || ws.sounds[0];
+  const M = src.master;
+  return (
+    <PalettePart title="Room" intro="One shared space makes the sounds feel like a family. Each sound keeps its own amount of it.">
+      <div className="flex items-center gap-2">
+        <span className="shrink-0 text-[12.5px] text-muted">Room from</span>
+        <Select label="Sound to take the room from" className="min-w-0 flex-1" value={src.id} groups={[{ items: ws.sounds.map((p) => ({ value: p.id, label: p.name })) }]} onChange={setFrom} />
+      </div>
+      <p className="px-0.5 text-[12px] text-muted">
+        {`${capitalized(M.reverbType)}, ${M.reverbSize.toFixed(2)} s long, darkness ${M.reverbDamping.toFixed(2)}${M.reverbReverse ? ', reversed' : ''}.`}
+      </p>
+      <Button size="sm" className="self-end" onClick={() => shareRoom(src.id)}>
+        Use this room for every sound
+      </Button>
+    </PalettePart>
+  );
+}
+
+export function PaletteDialog() {
+  const [open, onOpenChange] = useDialog('palette');
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Set palette"
+      description="What the sounds in this set share. Each change rewrites every sound at once, and one undo takes it back."
+      width={520}
+      footer={<Button onClick={closeDialog}>Done</Button>}
+    >
+      <div className="flex flex-col gap-6">
+        <KeyPart />
+        <LoudnessPart />
+        <RoomPart />
       </div>
     </Dialog>
   );

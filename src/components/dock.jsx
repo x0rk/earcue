@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Slider, Tabs } from 'radix-ui';
-import { CircleAlert, CircleCheck, Copy } from 'lucide-react';
-import { checkSet, describeKey, SCALES } from '../engine/checks.js';
+import { CircleAlert, CircleCheck, Copy, Palette } from 'lucide-react';
+import { checkSet } from '../engine/checks.js';
 import { dbToGain } from '../engine/engine.js';
 import { moduleSource } from '../engine/export.js';
-import { fmtHz, fmtHzUnit, fmtLevel, fmtPan, NOTE_NAMES } from '../lib/format.js';
+import { describeKey, widerKey } from '../engine/palette.js';
+import { samplePitch } from '../engine/pitch.js';
+import { fmtHz, fmtHzUnit, fmtLevel, fmtPan } from '../lib/format.js';
 import { comparePatch, renderCached, results } from '../playback.js';
-import { commit, currentSound, editLayer, editMaster, select, selectSound, setPref, setSetKey, showToast, useStore } from '../store.js';
-import { Button, hintProps, Select } from './ui.jsx';
+import { commit, currentSound, editLayer, editMaster, openDialog, select, selectSound, setPref, showToast, useStore } from '../store.js';
+import { Button, hintProps } from './ui.jsx';
 import { LayerIcon } from './icons.jsx';
 
 const SPEC_FLOOR_DB = -72;
@@ -324,7 +326,7 @@ function useSetChecks() {
     const timer = setTimeout(async () => {
       try {
         const renders = await Promise.all(ws.sounds.map(renderCached));
-        if (live) setIssues(checkSet(ws, new Map(ws.sounds.map((p, i) => [p.id, renders[i].m]))));
+        if (live) setIssues(checkSet(ws, new Map(ws.sounds.map((p, i) => [p.id, renders[i].m])), { samplePitch }));
       } catch (e) {
         console.error(e);
       }
@@ -337,25 +339,22 @@ function useSetChecks() {
   return issues;
 }
 
-const ROOTS = NOTE_NAMES.map((n, i) => ({ value: String(i), label: n }));
-const SCALE_ITEMS = [{ value: 'none', label: 'No key' }, ...Object.entries(SCALES).map(([value, s]) => ({ value, label: s.label[0].toUpperCase() + s.label.slice(1) }))];
+function keySummary(key) {
+  if (!key) return 'No key, so notes are not checked. Pick one in the palette.';
+  const wider = widerKey(key);
+  return `In ${describeKey(key)}. Notes outside ${wider ? describeKey(wider) : 'it'} are flagged, and so are notes that rub where one sound runs into the next.`;
+}
 
 function Checks({ issues }) {
   const key = useStore((s) => s.ws.key);
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex flex-wrap items-center gap-2 border-b border-line px-3 py-1.5 text-[12px] text-muted">
-        <span>Key</span>
-        {key && <Select label="Key note" size="sm" className="w-[64px]" value={String(key.root)} groups={[{ items: ROOTS }]} onChange={(v) => setSetKey({ ...key, root: Number(v) })} />}
-        <Select
-          label="Scale"
-          size="sm"
-          className="w-[156px]"
-          value={key ? key.scale : 'none'}
-          groups={[{ items: SCALE_ITEMS }]}
-          onChange={(v) => setSetKey(v === 'none' ? null : { root: key?.root ?? 0, scale: v })}
-        />
-        <span>{key ? `Notes outside ${describeKey(key)} are flagged.` : 'Pick a key to check that every note in the set fits it.'}</span>
+      <div className="flex items-center gap-2 border-b border-line py-1 pl-3 pr-1.5 text-[12px] text-muted">
+        <span className="min-w-0 flex-1">{keySummary(key)}</span>
+        <Button variant="ghost" size="sm" onClick={() => openDialog('palette')}>
+          <Palette className="!size-3.5" />
+          Palette
+        </Button>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-2 py-1.5">
         {issues === null ? (

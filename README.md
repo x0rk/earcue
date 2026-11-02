@@ -36,12 +36,16 @@ Most UI sounds today come from frozen sound packs or from code someone tuned by 
 
 **Design**
 
-- Keep a set of sounds for each product on the home page. A new set can start with the basics most products need: tap, toggle on and off, send, receive, success, error and notification, made in one key, one material and one room so they sound like a family.
+- Keep a set of sounds for each product on the home page. A new set can start with a sound for each of the 28 interactions most product sound kits cover (tap, typing, switches, open and close, back, swipe, send and receive, success, complete, celebrate, cancel, delete, warning, error, notification, urgent alert, ring, alarm, lock and unlock, connect and disconnect, capture), made in one key, one material and one room so they sound like a family. Or start with just the basic eight.
+- Explore openly licensed kits on the home page: Material, Android, KDE Ocean, Kenney and eleven uisfx packs. Play them there, or open one as a set to change and export. Each kit's sounds come mapped to the interactions they were made for.
 - Add sounds from templates (Thock, Pop, Keycap, Pebble and more) or start from a blank sound.
 - Stack layers: a tone you can slide and shape, noise for clicks and air, a struck object of metal, glass, wood or skin, and your own recordings or audio files.
 - Drag a layer's block to move it on the timeline. Drag its dots to set how fast it starts, how loud it is and how long it lasts. Recordings get the same dots, plus trimming and a pitch slide.
 - Clean up a recording: remove background noise (learned from the quiet part before the sound starts), mains hum at 50 or 60 Hz, and room noise between sounds with a gate. The original clip is kept, so every step can be turned back down.
 - Make the opposite of any sound in one step: its notes play in reverse and its slides run the other way, the way Toggle off mirrors Toggle on.
+- Make a variant: another take on a sound with new noise and a few cents of change, the way kits ship four taps instead of one. An interaction with several sounds plays one at random, never the same one twice in a row, so a sound heard all day never repeats exactly.
+- Grow a whole set from one sound, the way a studio builds a product's sounds from one motif or one recording. Earcue plays it once for Tap, twice rising for Toggle on, sliding up for Send, as a chord for Success and so on, keyed to the sound's own note. A recording with a clear pitch works too.
+- Give a set a palette: the key its notes stay in, how loud frequent sounds, confirmations and alerts are, and the room they share. Change the key and every note moves to the same step of the new scale, so tunes keep their shape. Each change applies to every sound at once, as one undo step.
 - Shape it further with filters and sweeps, wobble (vibrato and tremolo), grit, echo, tone controls and a loudness target.
 - Stack effects on any layer: EQ, a compressor, chorus, a flanger, a phaser and a bitcrusher, in the order you choose.
 - Put the whole sound in a room, hall, plate or spring reverb, or reverse it so it swells up, and round off peaks with a limiter. None of it adds delay, so sounds still land on time.
@@ -50,8 +54,8 @@ Most UI sounds today come from frozen sound packs or from code someone tuned by 
 
 **Judge**
 
-- Try the set on real UI. The preview opens beside the editor or full screen, with buttons, switches, a chat, a form, tabs, a menu, a dialog and a task list built in the style of [shadcn/ui](https://ui.shadcn.com). Pick the sound each interaction plays, and play a short scene of tap, send, receive and success to hear the set together.
-- Checks flag what breaks a family: sounds that start late, bass that small speakers can't play, sounds too long for their interaction, frequent sounds as loud as alerts, and notes outside the set's key.
+- Try the set on real UI. The preview opens beside the editor or full screen, with buttons, switches, a chat, a form, tabs, a menu, a dialog, a task list, onboarding, an upload, device controls and an incoming call, built in the style of [shadcn/ui](https://ui.shadcn.com). Pick the sounds each interaction plays, and play a short scene of tap, send, receive and success to hear the set together. A ring or an alarm repeats until you answer or stop it.
+- Checks flag what breaks a family: sounds that start late, bass that small speakers can't play, sounds too long for their interaction, frequent sounds as loud as alerts, notes outside the set's key, and notes that rub where one sound runs into the next. Notes from the wider scale around a pentatonic key count as fitting, a quick slide counts where it lands, and a sound can be marked as clashing on purpose, the way an error often does.
 - Compare against another sound or any audio file, with overlaid waveforms and frequency charts.
 - Read the measurements side by side: length, start delay, peak, average loudness, brightness and bass.
 - Balance layers in the mixer. Undo anything. Use keyboard shortcuts for the common actions.
@@ -61,7 +65,8 @@ Most UI sounds today come from frozen sound packs or from code someone tuned by 
 **Ship**
 
 - Export one sound or the whole set, and import a set back from its zip.
-- Get WAV or OGG files, a JavaScript module that plays the sounds with no audio files, or an editable project.
+- Get WAV or OGG files, a JavaScript module that plays the sounds with no audio files, or an editable project. The set's module also plays by interaction (`playRole('tap', ctx)` picks one of its variants) and loops a ring with `loopRole('ring', ctx)`.
+- A set made from a kit keeps the kit's credit, and zip exports carry it in their README.
 
 ## Use your sounds in code
 
@@ -120,4 +125,14 @@ Issues and pull requests are welcome. [CLAUDE.md](CLAUDE.md) explains how the co
 
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE), except the bundled kits in `public/kits`, which keep their own licences. Each kit's folder holds its licence or notice:
+
+| Kit | By | Licence |
+|---|---|---|
+| [Kenney UI Audio](https://kenney.nl/assets/ui-audio) and [Interface Sounds](https://kenney.nl/assets/interface-sounds) | Kenney | CC0 1.0 |
+| [Material product sounds](https://web.archive.org/web/20190717142129/https://material.io/design/sound/sound-resources.html) | Google | CC BY 4.0 |
+| [Android UI sound effects](https://android.googlesource.com/platform/frameworks/base/+/refs/heads/main/data/sounds/effects/ogg/) | The Android Open Source Project | Apache 2.0 |
+| [Ocean Sound Theme](https://invent.kde.org/plasma/ocean-sound-theme) | Guilherme Marçal Silva for KDE | CC BY-SA 4.0 |
+| [uisfx](https://github.com/romainsimon/uisfx) 0.4.0, eleven of its packs | uisfx | CC0 1.0 |
+
+Sounds you make from the Material, Android or KDE Ocean recordings need their credit when you share them, and sounds made from KDE Ocean stay CC BY-SA 4.0.

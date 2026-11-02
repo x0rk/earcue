@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { produce } from 'immer';
 import { APP_NAME, APP_SLUG } from './brand.js';
 import {
+  basicSounds,
   blankPatch,
   cleanName,
   cloneLayerFresh,
@@ -15,10 +16,14 @@ import {
   TYPE_LABEL,
   uid,
   uniqueName,
+  variantBase,
+  variantOf,
 } from './engine/model.js';
-import { normalizeKey, STARTER_KEY } from './engine/checks.js';
-import { normalizeRoles } from './engine/roles.js';
-import { detectOnsetMs, loadSamples } from './engine/samples.js';
+import { familyOf } from './engine/family.js';
+import { describeKey, normalizeKey, normalizeLoudness, retunePatch, ROOM_KEYS, STARTER_KEY, tierOf } from './engine/palette.js';
+import { samplePitch } from './engine/pitch.js';
+import { MAX_VARIANTS, normalizeRoles, ROLES, roleLabel, soundsForRole } from './engine/roles.js';
+import { detectOnsetMs, loadSamples, sampleDurationMs, samples } from './engine/samples.js';
 import { keyLabel } from './lib/keys.js';
 
 // Each sound set is saved under its own key, so the home page can list sets without a separate index
@@ -94,7 +99,18 @@ function normalizeSet(raw, id) {
     current: sounds.some((x) => x.id === raw.current) ? raw.current : sounds[0].id,
     roles: normalizeRoles(raw.roles, sounds),
     key: normalizeKey(raw.key),
+    loudness: normalizeLoudness(raw.loudness),
+    credits: normalizeCredits(raw.credits),
   };
+}
+
+// Where a set's recordings came from, such as a bundled kit, so exports can keep the credit their
+// licence asks for.
+const MAX_CREDITS = 20;
+const MAX_CREDIT = 300;
+function normalizeCredits(raw) {
+  if (!Array.isArray(raw)) return [];
+  return [...new Set(raw.filter((c) => typeof c === 'string').map((c) => cleanName(c, MAX_CREDIT)).filter(Boolean))].slice(0, MAX_CREDITS);
 }
 
 export const readSet = (id) => normalizeSet(readJson(setKey(id)), id);
@@ -121,7 +137,7 @@ export function sampleIdsInSets() {
   return ids;
 }
 
-const newSet = (name, sounds, key = null) => ({ id: uid(), name, created: Date.now(), sounds, current: sounds[0].id, roles: {}, key });
+const newSet = (name, sounds, key = null, loudness = normalizeLoudness(), credits = []) => ({ id: uid(), name, created: Date.now(), sounds, current: sounds[0].id, roles: {}, key, loudness, credits });
 
 // The first visit gets the starter set. A visit from before sets existed also keeps its old sound list
 // as a set of its own.
@@ -556,9 +572,11 @@ export function followUrl() {
 
 const setNames = () => listSets().map((x) => x.name);
 
+const STARTS = { starter: starterSounds, basics: basicSounds, blank: () => [blankPatch('Untitled sound')] };
+
 export function createSet(name, start) {
   const starter = start !== 'blank';
-  const sounds = starter ? starterSounds() : [blankPatch('Untitled sound')];
+  const sounds = (STARTS[start] || STARTS.starter)();
   const created = newSet(uniqueName(cleanName(name, MAX_NAME) || NEW_SET_NAME, setNames()), sounds, starter ? STARTER_KEY : null);
   writeSet(created);
   openSet(created.id);
@@ -588,9 +606,9 @@ export function duplicateSet(id) {
   // Fresh ids keep renders and comparisons of the two sets apart; the role choices follow the new ids.
   const sounds = data.sounds.map((p) => ({ ...p, id: uid(), layers: p.layers.map(cloneLayerFresh) }));
   const newId = new Map(data.sounds.map((p, i) => [p.id, sounds[i].id]));
-  const roles = Object.fromEntries(Object.entries(data.roles).map(([role, id]) => [role, id && newId.get(id)]));
+  const roles = Object.fromEntries(Object.entries(data.roles).map(([role, ids]) => [role, ids && ids.map((id) => newId.get(id))]));
   const index = data.sounds.findIndex((x) => x.id === data.current);
-  const copy = { ...newSet(uniqueName(`${data.name} copy`, setNames()), sounds, data.key), current: sounds[Math.max(0, index)].id, roles };
+  const copy = { ...newSet(uniqueName(`${data.name} copy`, setNames()), sounds, data.key, data.loudness, data.credits), current: sounds[Math.max(0, index)].id, roles };
   writeSet(copy);
   refreshSets();
   showToast(`Duplicated as ${copy.name}.`);
@@ -606,17 +624,120 @@ export function deleteSet(id) {
 
 export const setTitle = (s) => (s.page === 'set' && s.ws ? `${s.ws.name} · ${APP_NAME}` : APP_NAME);
 
-// ---------- preview ----------
-// Which sound plays for an interaction. null keeps it silent; undefined goes back to matching by name.
-export function setRole(roleId, soundId) {
-  edit((ws) => {
-    ws.roles = { ...ws.roles, [roleId]: soundId };
-    if (soundId === undefined) delete ws.roles[roleId];
-  });
+const sampleMs = (id) => (samples.has(id) ? sampleDurationMs(samples.get(id)) : null);
+const countOf = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+
+// A set made from one sound: its eight interactions, keyed to the sound's own note. It opens straight away.
+export function createSetFromSound(id) {
+  const { ws } = get();
+  const src = ws.sounds.find((x) => x.id === id);
+  if (!src) return;
+  const family = familyOf(src, { samplePitch, sampleMs, loudness: ws.loudness });
+  if (!family) {
+    showToast(`${src.name} has no layer you can hear, so there is nothing to build from.`);
+    return;
+  }
+  // A family grown from a kit's recording still uses it, so it keeps the kit's credit.
+  const created = newSet(uniqueName(`${src.name} family`, setNames()), family.sounds, family.key, ws.loudness, ws.credits);
+  writeSet(created);
+  openSet(created.id);
+  showToast(family.key ? `Made ${created.name} from ${src.name}, in ${describeKey(family.key)}.` : `Made ${created.name} from ${src.name}. It has no clear pitch, so the set has no key.`);
 }
 
-// The key the set's notes should stay in, or null for no key.
-export const setSetKey = (key) => edit((ws) => void (ws.key = key));
+// A set made from a bundled kit: its recordings, the interactions the kit's sounds were made for, and
+// the credit its licence asks for. It opens straight away.
+export function importKit(kit, sounds, roles, skipped = 0) {
+  const created = { ...newSet(uniqueName(cleanName(kit.name, MAX_NAME), setNames()), sounds, null, normalizeLoudness(), [kit.credit]), roles: normalizeRoles(roles, sounds) };
+  writeSet(created);
+  openSet(created.id);
+  showToast(
+    skipped
+      ? `Opened ${kit.name} as a set of ${countOf(sounds.length, 'sound')}. ${countOf(skipped, 'sound')} couldn't be loaded.`
+      : `Opened ${kit.name} as a set of ${countOf(sounds.length, 'sound')}. Change them as you like; the kit stays as it was.`,
+  );
+}
+
+// Another take on a sound, placed after the takes it already has. Interactions that were picked to
+// play the sound pick between all its takes from now on; one undo removes it again.
+export function addVariant(id) {
+  const { ws } = get();
+  const src = ws.sounds.find((x) => x.id === id);
+  if (!src) return;
+  const base = variantBase(src.name);
+  const takes = ws.sounds.filter((x) => variantBase(x.name) === base);
+  const p = normalizePatch(variantOf(src, takes.length));
+  const after = ws.sounds.indexOf(takes.at(-1) || src);
+  edit((draft) => {
+    p.name = uniqueName(p.name, draft.sounds.map((x) => x.name));
+    draft.sounds.splice(after + 1, 0, p);
+    draft.current = p.id;
+    for (const [role, ids] of Object.entries(draft.roles)) if (ids?.includes(src.id) && ids.length < MAX_VARIANTS) draft.roles[role] = [...ids, p.id];
+  });
+  set({ sel: firstLayer(p), view: { ...get().view, auto: true } });
+  const plays = ROLES.filter((r) => soundsForRole(get().ws, r.id).some((x) => x.id === p.id)).map((r) => roleLabel(r.id));
+  showToast(
+    plays.length
+      ? `Made ${p.name}, another take on ${src.name}. ${plays.join(', ')} now picks one of them at random.`
+      : `Made ${p.name}, another take on ${src.name}. Pick both for an interaction in the preview to hear them in turn.`,
+  );
+}
+
+// ---------- palette ----------
+// The key the set's notes stay in, or null for none. With retune, every sound moves into the new key
+// in the same undo step; without it, only what the checks compare against changes.
+export function changeKey(key, { retune = true } = {}) {
+  let moved = 0;
+  edit((ws) => {
+    if (retune && key) for (const p of ws.sounds) if (retunePatch(p, ws.key, key, samplePitch)) moved += 1;
+    ws.key = key;
+  });
+  if (!key) showToast("The set has no key now, so its notes aren't checked.");
+  else if (!retune) showToast(`Checking the notes against ${describeKey(key)}. No sound changed.`);
+  else if (moved) showToast(`Moved ${countOf(moved, 'sound')} into ${describeKey(key)}. Press ${keyLabel('⌘Z')} to undo.`);
+  else showToast(`The set is in ${describeKey(key)}. No note had to move.`);
+}
+
+// Gives each sound the loudness of its tier, from the interactions it plays for. A sound that plays
+// for none keeps its own.
+export function setLoudness(levels) {
+  const loudness = normalizeLoudness(levels);
+  let tiered = 0;
+  let changed = 0;
+  edit((ws) => {
+    ws.loudness = loudness;
+    for (const p of ws.sounds) {
+      const tier = tierOf(ws, p.id);
+      if (!tier) continue;
+      tiered += 1;
+      if (p.master.out === loudness[tier]) continue;
+      p.master.out = loudness[tier];
+      changed += 1;
+    }
+  });
+  if (!tiered) showToast('No sound plays for an interaction yet. Pick them in the preview first.');
+  else if (!changed) showToast('Every sound already has the loudness of its role.');
+  else showToast(`Set the loudness of ${countOf(changed, 'sound')} by role. Press ${keyLabel('⌘Z')} to undo.`);
+}
+
+// Puts every sound in the same room as one of them. Each keeps how much of the room it uses.
+export function shareRoom(soundId) {
+  const src = get().ws.sounds.find((x) => x.id === soundId);
+  if (!src) return;
+  edit((ws) => {
+    for (const p of ws.sounds) for (const k of ROOM_KEYS) p.master[k] = src.master[k];
+  });
+  showToast(`Every sound now uses the room from ${src.name}. Press ${keyLabel('⌘Z')} to undo.`);
+}
+
+// ---------- preview ----------
+// Which sounds play for an interaction, one at random each time. null keeps it silent; undefined or an
+// empty list goes back to matching by name.
+export function setRole(roleId, soundIds) {
+  edit((ws) => {
+    ws.roles = { ...ws.roles, [roleId]: soundIds };
+    if (soundIds === undefined || soundIds?.length === 0) delete ws.roles[roleId];
+  });
+}
 
 export const setPreview = (preview) => setPref({ preview });
 export const setPreviewWidth = (previewWidth) => setPref({ previewWidth: Math.round(previewWidth) });
