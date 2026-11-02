@@ -31,7 +31,7 @@ import { Sidebar, focusSelectedRow } from './components/sidebar.jsx';
 import { Timeline, TimelineBar, fitTimeline, zoomBy } from './components/timeline.jsx';
 import { Inspector } from './components/inspector.jsx';
 import { Dock, MetricsBar } from './components/dock.jsx';
-import { ExportDialog, NewSoundDialog, RecordDialog, ShortcutsDialog } from './components/dialogs.jsx';
+import { ExportDialog, NewSoundDialog, PaletteDialog, RecordDialog, ShortcutsDialog } from './components/dialogs.jsx';
 
 function useTheme() {
   const theme = useStore((s) => s.theme);
@@ -192,7 +192,8 @@ function useFileDrop() {
 function Toast() {
   const toast = useStore((s) => s.toast);
   return (
-    <div role="status" className="pointer-events-none fixed bottom-[calc(20px+env(safe-area-inset-bottom,0px))] left-1/2 z-50 max-w-[calc(100vw-32px)] -translate-x-1/2">
+    // Above dialogs too, so an action taken in one still reports back.
+    <div role="status" className="pointer-events-none fixed bottom-[calc(20px+env(safe-area-inset-bottom,0px))] left-1/2 z-[60] max-w-[calc(100vw-32px)] -translate-x-1/2">
       {toast && (
         <div key={toast.id} className="rounded-xl bg-ink px-4 py-2.5 text-[13px] text-panel shadow-pop animate-pop-in">
           {toast.text}
@@ -297,6 +298,7 @@ function Editor() {
       <ExportDialog />
       <RecordDialog />
       <ShortcutsDialog />
+      <PaletteDialog />
     </>
   );
 }

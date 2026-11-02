@@ -20,8 +20,11 @@ Vite, React, Radix primitives (`radix-ui`), Tailwind CSS v4, zustand with immer,
 
 - `src/engine/engine.js` builds the Web Audio graph for a sound. It is embedded verbatim in the exported JavaScript module, so it must stay self-contained: no imports, and only its own declarations and `Math`.
 - `src/engine/model.js` holds layer and output defaults, the starter sounds and templates, opposites, and validation for saved or imported data.
-- `src/engine/roles.js` lists the interactions a set covers (tap, send, error and so on) and finds each one's sound: the one the set picked, else the one with a matching name.
-- `src/engine/checks.js` checks that a set holds together: start delay, bass, length and loudness by role, and notes against the set's key.
+- `src/engine/roles.js` lists the interactions a set covers (tap, send, error and so on), each in a tier (frequent, confirm or alert), and finds each one's sound: the one the set picked, else the one with a matching name.
+- `src/engine/palette.js` holds what a set's sounds share: the key (scales, the wider scale around a pentatonic key, retuning), loudness by tier, and the room settings. Retuning moves each note to the same step of the new scale and keeps whatever sits off the scale, so a deliberate clash (`patch.tension`) stays one. Applying the palette rewrites the sounds, so exports never depend on the set.
+- `src/engine/pitch.js` finds the pitch of a recording (McLeod's normalized square difference), so recordings can be checked, retuned and grown into a family. `samplePitch(id)` caches the answer per sample.
+- `src/engine/family.js` grows a set from one sound: each interaction plays the source one or more times, moved in time and pitch within a major pentatonic scale on the source's note.
+- `src/engine/checks.js` checks that a set holds together: start delay, bass, length and loudness by role, notes against the set's key, and clashes between sounds that play one after another.
 - `src/engine/render.js` renders offline, trims the tail, normalizes the peak and computes the measurements.
 - `src/engine/samples.js` keeps decoded audio for audio layers and persists it to IndexedDB.
 - `src/engine/export.js` writes WAV and zip files, generates the JavaScript modules and reads and writes project files.

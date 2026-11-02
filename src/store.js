@@ -16,9 +16,11 @@ import {
   uid,
   uniqueName,
 } from './engine/model.js';
-import { normalizeKey, STARTER_KEY } from './engine/checks.js';
+import { familyOf } from './engine/family.js';
+import { describeKey, normalizeKey, normalizeLoudness, retunePatch, ROOM_KEYS, STARTER_KEY, tierOf } from './engine/palette.js';
+import { samplePitch } from './engine/pitch.js';
 import { normalizeRoles } from './engine/roles.js';
-import { detectOnsetMs, loadSamples } from './engine/samples.js';
+import { detectOnsetMs, loadSamples, sampleDurationMs, samples } from './engine/samples.js';
 import { keyLabel } from './lib/keys.js';
 
 // Each sound set is saved under its own key, so the home page can list sets without a separate index
@@ -94,6 +96,7 @@ function normalizeSet(raw, id) {
     current: sounds.some((x) => x.id === raw.current) ? raw.current : sounds[0].id,
     roles: normalizeRoles(raw.roles, sounds),
     key: normalizeKey(raw.key),
+    loudness: normalizeLoudness(raw.loudness),
   };
 }
 
@@ -121,7 +124,7 @@ export function sampleIdsInSets() {
   return ids;
 }
 
-const newSet = (name, sounds, key = null) => ({ id: uid(), name, created: Date.now(), sounds, current: sounds[0].id, roles: {}, key });
+const newSet = (name, sounds, key = null, loudness = normalizeLoudness()) => ({ id: uid(), name, created: Date.now(), sounds, current: sounds[0].id, roles: {}, key, loudness });
 
 // The first visit gets the starter set. A visit from before sets existed also keeps its old sound list
 // as a set of its own.
@@ -590,7 +593,7 @@ export function duplicateSet(id) {
   const newId = new Map(data.sounds.map((p, i) => [p.id, sounds[i].id]));
   const roles = Object.fromEntries(Object.entries(data.roles).map(([role, id]) => [role, id && newId.get(id)]));
   const index = data.sounds.findIndex((x) => x.id === data.current);
-  const copy = { ...newSet(uniqueName(`${data.name} copy`, setNames()), sounds, data.key), current: sounds[Math.max(0, index)].id, roles };
+  const copy = { ...newSet(uniqueName(`${data.name} copy`, setNames()), sounds, data.key, data.loudness), current: sounds[Math.max(0, index)].id, roles };
   writeSet(copy);
   refreshSets();
   showToast(`Duplicated as ${copy.name}.`);
@@ -606,6 +609,72 @@ export function deleteSet(id) {
 
 export const setTitle = (s) => (s.page === 'set' && s.ws ? `${s.ws.name} · ${APP_NAME}` : APP_NAME);
 
+const sampleMs = (id) => (samples.has(id) ? sampleDurationMs(samples.get(id)) : null);
+const countOf = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+
+// A set made from one sound: its eight interactions, keyed to the sound's own note. It opens straight away.
+export function createSetFromSound(id) {
+  const { ws } = get();
+  const src = ws.sounds.find((x) => x.id === id);
+  if (!src) return;
+  const family = familyOf(src, { samplePitch, sampleMs, loudness: ws.loudness });
+  if (!family) {
+    showToast(`${src.name} has no layer you can hear, so there is nothing to build from.`);
+    return;
+  }
+  const created = newSet(uniqueName(`${src.name} family`, setNames()), family.sounds, family.key, ws.loudness);
+  writeSet(created);
+  openSet(created.id);
+  showToast(family.key ? `Made ${created.name} from ${src.name}, in ${describeKey(family.key)}.` : `Made ${created.name} from ${src.name}. It has no clear pitch, so the set has no key.`);
+}
+
+// ---------- palette ----------
+// The key the set's notes stay in, or null for none. With retune, every sound moves into the new key
+// in the same undo step; without it, only what the checks compare against changes.
+export function changeKey(key, { retune = true } = {}) {
+  let moved = 0;
+  edit((ws) => {
+    if (retune && key) for (const p of ws.sounds) if (retunePatch(p, ws.key, key, samplePitch)) moved += 1;
+    ws.key = key;
+  });
+  if (!key) showToast("The set has no key now, so its notes aren't checked.");
+  else if (!retune) showToast(`Checking the notes against ${describeKey(key)}. No sound changed.`);
+  else if (moved) showToast(`Moved ${countOf(moved, 'sound')} into ${describeKey(key)}. Press ${keyLabel('⌘Z')} to undo.`);
+  else showToast(`The set is in ${describeKey(key)}. No note had to move.`);
+}
+
+// Gives each sound the loudness of its tier, from the interactions it plays for. A sound that plays
+// for none keeps its own.
+export function setLoudness(levels) {
+  const loudness = normalizeLoudness(levels);
+  let tiered = 0;
+  let changed = 0;
+  edit((ws) => {
+    ws.loudness = loudness;
+    for (const p of ws.sounds) {
+      const tier = tierOf(ws, p.id);
+      if (!tier) continue;
+      tiered += 1;
+      if (p.master.out === loudness[tier]) continue;
+      p.master.out = loudness[tier];
+      changed += 1;
+    }
+  });
+  if (!tiered) showToast('No sound plays for an interaction yet. Pick them in the preview first.');
+  else if (!changed) showToast('Every sound already has the loudness of its role.');
+  else showToast(`Set the loudness of ${countOf(changed, 'sound')} by role. Press ${keyLabel('⌘Z')} to undo.`);
+}
+
+// Puts every sound in the same room as one of them. Each keeps how much of the room it uses.
+export function shareRoom(soundId) {
+  const src = get().ws.sounds.find((x) => x.id === soundId);
+  if (!src) return;
+  edit((ws) => {
+    for (const p of ws.sounds) for (const k of ROOM_KEYS) p.master[k] = src.master[k];
+  });
+  showToast(`Every sound now uses the room from ${src.name}. Press ${keyLabel('⌘Z')} to undo.`);
+}
+
 // ---------- preview ----------
 // Which sound plays for an interaction. null keeps it silent; undefined goes back to matching by name.
 export function setRole(roleId, soundId) {
@@ -614,9 +683,6 @@ export function setRole(roleId, soundId) {
     if (soundId === undefined) delete ws.roles[roleId];
   });
 }
-
-// The key the set's notes should stay in, or null for no key.
-export const setSetKey = (key) => edit((ws) => void (ws.key = key));
 
 export const setPreview = (preview) => setPref({ preview });
 export const setPreviewWidth = (previewWidth) => setPref({ previewWidth: Math.round(previewWidth) });

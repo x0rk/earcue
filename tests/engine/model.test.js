@@ -105,6 +105,11 @@ describe('normalizePatch', () => {
     expect(Object.keys(master).sort()).toEqual(Object.keys(masterDefaults()).sort());
   });
 
+  it('keeps the mark for a sound that clashes on purpose only when it is true', () => {
+    expect(normalizePatch({ layers: [], tension: true }).tension).toBe(true);
+    for (const tension of [false, 'yes', 1, null]) expect(normalizePatch({ layers: [], tension })).not.toHaveProperty('tension');
+  });
+
   it('drops invalid layers and keeps at most MAX_LAYERS', () => {
     expect(normalizePatch({ layers: [{ type: 'tone' }, { type: 'bogus' }, null, 'noise'] }).layers).toHaveLength(1);
     const layers = Array.from({ length: MAX_LAYERS + 36 }, () => ({ type: 'noise' }));

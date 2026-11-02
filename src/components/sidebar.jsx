@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { ArrowLeftRight, Copy, FileAudio, FolderOpen, GitCompareArrows, Headphones, Mic, MoreHorizontal, Pencil, Plus, SlidersHorizontal, Trash2, Volume2, VolumeX } from 'lucide-react';
+import { ArrowLeftRight, Copy, FileAudio, FolderOpen, GitCompareArrows, Headphones, ListMusic, Mic, MoreHorizontal, Pencil, Plus, SlidersHorizontal, Trash2, Volume2, VolumeX } from 'lucide-react';
 import { TYPE_BLURB, TYPE_LABEL } from '../engine/model.js';
-import { addLayer, addOppositeSound, currentSound, deleteSound, duplicateSound, editLayer, openDialog, renameSound, select, selectSound, setCompare, useStore } from '../store.js';
+import { addLayer, addOppositeSound, createSetFromSound, currentSound, deleteSound, duplicateSound, editLayer, openDialog, renameSound, select, selectSound, setCompare, useStore } from '../store.js';
 import { pickAudioFiles, pickProjectFile } from '../io.js';
 import { Button, EditableText, Menu } from './ui.jsx';
 import { LayerIcon } from './icons.jsx';
@@ -70,6 +70,7 @@ function SoundRow({ sound, active, isCompare, canDelete }) {
           { label: 'Rename', icon: <Pencil />, keepFocus: true, onSelect: () => requestAnimationFrame(() => setRenaming(true)) },
           { label: 'Duplicate', icon: <Copy />, onSelect: () => duplicateSound(sound.id) },
           { label: 'Make the opposite', description: 'Notes in reverse, slides the other way', icon: <ArrowLeftRight />, onSelect: () => addOppositeSound(sound.id) },
+          { label: 'Make a set from this sound', description: 'Eight interactions, all grown from it', icon: <ListMusic />, onSelect: () => createSetFromSound(sound.id) },
           { label: 'Compare with this', icon: <GitCompareArrows />, disabled: active, onSelect: () => setCompare({ kind: 'sound', id: sound.id }) },
           'sep',
           { label: 'Delete', icon: <Trash2 />, danger: true, disabled: !canDelete, onSelect: () => deleteSound(sound.id) },

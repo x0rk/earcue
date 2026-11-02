@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { blankPatch } from '../../src/engine/model.js';
-import { normalizeRoles, soundForRole } from '../../src/engine/roles.js';
+import { normalizeRoles, ROLES, rolesInTier, soundForRole } from '../../src/engine/roles.js';
 
 const named = (name, id) => ({ ...blankPatch(name), id });
 
@@ -47,5 +47,13 @@ describe('normalizeRoles', () => {
 
   it('returns no roles for anything that is not an object', () => {
     for (const raw of [null, undefined, 'tap', 42]) expect(normalizeRoles(raw, sounds)).toEqual({});
+  });
+});
+
+describe('tiers', () => {
+  it('puts every interaction in one tier, by how often it plays and how much it should be noticed', () => {
+    for (const r of ROLES) expect(['frequent', 'confirm', 'alert']).toContain(r.tier);
+    expect(rolesInTier('frequent')).toEqual(['tap', 'hover', 'toggle-on', 'toggle-off', 'select']);
+    expect(rolesInTier('alert')).toEqual(['error', 'notification']);
   });
 });

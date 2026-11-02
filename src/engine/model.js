@@ -189,9 +189,12 @@ export function presets() {
 const NOTE = { D5: 587.33, G5: 783.99, Bb5: 932.33, C6: 1046.5, D6: 1174.66, F6: 1396.91, G6: 1567.98, Bb6: 1864.66 };
 // One shared room, and loudness by how often a sound plays: frequent ones quiet, alerts loudest.
 const ROOM = { reverbSize: 0.25, reverbDamping: 0.5 };
-const SUBTLE = -24;
-const DEFAULT = -20;
-const ALERT = -18;
+export const LOUDNESS = { frequent: -24, confirm: -20, alert: -18 };
+// The peak loudness a sound's Output can be set to, in dBFS.
+export const LOUDNESS_RANGE = [-40, -1];
+const SUBTLE = LOUDNESS.frequent;
+const DEFAULT = LOUDNESS.confirm;
+const ALERT = LOUDNESS.alert;
 
 // The sounds most products need, built as one family: one key, one soft material, one room. Taps are
 // shortest and quietest, alerts longest; rising means something good, falling means an ending.
@@ -366,7 +369,7 @@ const LIMITS = {
     delayTime: [5, 1000],
     delayFeedback: [0, 0.9],
     delayTone: [500, 20000],
-    out: [-40, -1],
+    out: LOUDNESS_RANGE,
     fade: [0, 100],
     variation: [0, 100],
     limit: [0, 12],
@@ -442,6 +445,8 @@ export function normalizePatch(p) {
     seed: typeof p.seed === 'number' ? p.seed >>> 0 : randSeed(),
     layers: p.layers.slice(0, MAX_LAYERS).map(normalizeLayer).filter(Boolean),
     master: normalizeMaster(p.master),
+    // Set on a sound that leaves the set's key on purpose, like an error that should clash.
+    ...(p.tension === true && { tension: true }),
   };
 }
 

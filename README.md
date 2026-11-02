@@ -42,6 +42,8 @@ Most UI sounds today come from frozen sound packs or from code someone tuned by 
 - Drag a layer's block to move it on the timeline. Drag its dots to set how fast it starts, how loud it is and how long it lasts. Recordings get the same dots, plus trimming and a pitch slide.
 - Clean up a recording: remove background noise (learned from the quiet part before the sound starts), mains hum at 50 or 60 Hz, and room noise between sounds with a gate. The original clip is kept, so every step can be turned back down.
 - Make the opposite of any sound in one step: its notes play in reverse and its slides run the other way, the way Toggle off mirrors Toggle on.
+- Grow a whole set from one sound, the way a studio builds a product's sounds from one motif or one recording. Earcue plays it once for Tap, twice rising for Toggle on, sliding up for Send, as a chord for Success and so on, keyed to the sound's own note. A recording with a clear pitch works too.
+- Give a set a palette: the key its notes stay in, how loud frequent sounds, confirmations and alerts are, and the room they share. Change the key and every note moves to the same step of the new scale, so tunes keep their shape. Each change applies to every sound at once, as one undo step.
 - Shape it further with filters and sweeps, wobble (vibrato and tremolo), grit, echo, tone controls and a loudness target.
 - Stack effects on any layer: EQ, a compressor, chorus, a flanger, a phaser and a bitcrusher, in the order you choose.
 - Put the whole sound in a room, hall, plate or spring reverb, or reverse it so it swells up, and round off peaks with a limiter. None of it adds delay, so sounds still land on time.
@@ -51,7 +53,7 @@ Most UI sounds today come from frozen sound packs or from code someone tuned by 
 **Judge**
 
 - Try the set on real UI. The preview opens beside the editor or full screen, with buttons, switches, a chat, a form, tabs, a menu, a dialog and a task list built in the style of [shadcn/ui](https://ui.shadcn.com). Pick the sound each interaction plays, and play a short scene of tap, send, receive and success to hear the set together.
-- Checks flag what breaks a family: sounds that start late, bass that small speakers can't play, sounds too long for their interaction, frequent sounds as loud as alerts, and notes outside the set's key.
+- Checks flag what breaks a family: sounds that start late, bass that small speakers can't play, sounds too long for their interaction, frequent sounds as loud as alerts, notes outside the set's key, and notes that rub where one sound runs into the next. Notes from the wider scale around a pentatonic key count as fitting, a quick slide counts where it lands, and a sound can be marked as clashing on purpose, the way an error often does.
 - Compare against another sound or any audio file, with overlaid waveforms and frequency charts.
 - Read the measurements side by side: length, start delay, peak, average loudness, brightness and bass.
 - Balance layers in the mixer. Undo anything. Use keyboard shortcuts for the common actions.

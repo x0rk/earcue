@@ -1,12 +1,14 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { blankPatch, layerDefaults, starterSounds } from '../src/engine/model.js';
+import { blankPatch, layerDefaults, LOUDNESS, starterSounds } from '../src/engine/model.js';
+import { midiOf } from '../src/engine/palette.js';
 
 const setKey = (id) => `earcue:set:${id}:v1`;
 const META_KEY = 'earcue:meta:v1';
 const LEGACY_KEY = 'earcue:workspace:v1';
 const STARTER_NAMES = ['Tap', 'Toggle on', 'Toggle off', 'Send', 'Receive', 'Success', 'Error', 'Notification'];
 const STARTER_KEY = { root: 10, scale: 'major-pentatonic' };
+const C_PENT = { root: 0, scale: 'major-pentatonic' };
 
 // store.js seeds storage and reads the URL as it loads, so each test sets both up and imports a fresh copy.
 async function reloadStore(url = '/') {
@@ -251,12 +253,112 @@ describe('history', () => {
     expect(state(store).ws.name).toBe('Starter set');
   });
 
-  it('undoes a change of key', async () => {
+});
+
+describe('palette', () => {
+  const sound = (store, name) => state(store).ws.sounds.find((p) => p.name === name);
+  const note = (hz) => Math.round(midiOf(hz));
+
+  it('changeKey moves every sound into the new key, as one undo step', async () => {
     const store = await openStarter();
-    store.setSetKey({ root: 0, scale: 'minor' });
+    const before = state(store).ws.sounds;
+    store.changeKey(C_PENT);
+    const body = sound(store, 'Tap').layers[0];
+    // D6 and B-flat5 are the third and first notes of B-flat major pentatonic; in C they are E6 and C6.
+    expect([note(body.pitchStart), note(body.pitchEnd)]).toEqual([88, 84]);
+    expect(state(store).ws.key).toEqual(C_PENT);
+    expect(state(store).toast.text).toMatch(/^Moved 8 sounds into C major pentatonic\./);
+    store.undo();
+    expect(state(store).ws.sounds).toEqual(before);
+    expect(state(store).ws.key).toEqual(STARTER_KEY);
+  });
+
+  it('changeKey without retuning only changes what the checks compare against', async () => {
+    const store = await openStarter();
+    const before = state(store).ws.sounds;
+    store.changeKey({ root: 0, scale: 'minor' }, { retune: false });
+    expect(state(store).ws.sounds).toBe(before);
     expect(state(store).ws.key).toEqual({ root: 0, scale: 'minor' });
+    store.changeKey(null);
+    expect(state(store).ws.key).toBeNull();
+    expect(state(store).ws.sounds).toBe(before);
+    store.undo();
     store.undo();
     expect(state(store).ws.key).toEqual(STARTER_KEY);
+  });
+
+  it('setLoudness gives each sound the level of its role, and saves the levels with the set', async () => {
+    const store = await openStarter();
+    store.setLoudness({ frequent: -30, confirm: -22, alert: -16 });
+    expect(['Tap', 'Toggle off', 'Send', 'Success', 'Error', 'Notification'].map((n) => sound(store, n).master.out)).toEqual([-30, -30, -22, -22, -16, -16]);
+    vi.runOnlyPendingTimers();
+    expect(store.readSet(state(store).ws.id).loudness).toEqual({ frequent: -30, confirm: -22, alert: -16 });
+    store.undo();
+    expect(sound(store, 'Tap').master.out).toBe(LOUDNESS.frequent);
+    expect(state(store).ws.loudness).toEqual(LOUDNESS);
+  });
+
+  it('setLoudness leaves a sound that plays for no interaction alone', async () => {
+    const store = await openStarter();
+    store.setRole('tap', null);
+    store.setLoudness({ ...LOUDNESS, frequent: -30 });
+    expect(sound(store, 'Tap').master.out).toBe(LOUDNESS.frequent);
+    expect(sound(store, 'Toggle on').master.out).toBe(-30);
+  });
+
+  it('shareRoom puts every sound in the same room, and each keeps its amount', async () => {
+    const store = await openStarter();
+    store.edit((ws) => void Object.assign(ws.sounds[0].master, { reverbType: 'hall', reverbSize: 1.2, reverbReverse: true }));
+    const tap = sound(store, 'Tap');
+    const amounts = state(store).ws.sounds.map((p) => p.master.reverbMix);
+    store.shareRoom(tap.id);
+    for (const p of state(store).ws.sounds) expect(p.master).toMatchObject({ reverbType: 'hall', reverbSize: 1.2, reverbDamping: tap.master.reverbDamping, reverbReverse: true });
+    expect(state(store).ws.sounds.map((p) => p.master.reverbMix)).toEqual(amounts);
+    store.undo();
+    expect(sound(store, 'Send').master.reverbType).toBe('room');
+  });
+
+  it('keeps the loudness levels when a set is duplicated', async () => {
+    const store = await openStarter();
+    store.setLoudness({ frequent: -30, confirm: -22, alert: -16 });
+    vi.runOnlyPendingTimers();
+    store.duplicateSet(state(store).ws.id);
+    const copy = store.listSets().find((x) => x.name === 'Starter set copy');
+    expect(store.readSet(copy.id).loudness).toEqual({ frequent: -30, confirm: -22, alert: -16 });
+  });
+});
+
+describe('createSetFromSound', () => {
+  it('opens a new set of eight interactions made from the sound, in its key', async () => {
+    const store = await openStarter();
+    const starter = state(store).ws;
+    const tap = starter.sounds.find((p) => p.name === 'Tap');
+    store.createSetFromSound(tap.id);
+    const { ws } = state(store);
+    expect(ws.id).not.toBe(starter.id);
+    expect(ws.name).toBe('Tap family');
+    expect(ws.sounds.map((p) => p.name)).toEqual(STARTER_NAMES);
+    expect(ws.key).toEqual(STARTER_KEY);
+    expect(ws.sounds.find((p) => p.name === 'Error').tension).toBe(true);
+    expect(window.location.search).toBe(`?set=${ws.id}`);
+    expect(state(store).toast.text).toBe('Made Tap family from Tap, in Bb major pentatonic.');
+    expect(store.readSet(starter.id).sounds).toHaveLength(8);
+    expect(shared(ws, starter)).toEqual([]);
+  });
+
+  it('picks a free name and says when a sound has nothing to build from', async () => {
+    const store = await openStarter();
+    const { ws } = state(store);
+    const tap = ws.sounds.find((p) => p.name === 'Tap');
+    store.createSetFromSound(tap.id);
+    store.openSet(ws.id);
+    store.createSetFromSound(tap.id);
+    expect(state(store).ws.name).toBe('Tap family 2');
+    store.openSet(ws.id);
+    store.edit((d) => d.sounds[0].layers.forEach((L) => void (L.on = false)));
+    store.createSetFromSound(tap.id);
+    expect(state(store).ws.id).toBe(ws.id);
+    expect(state(store).toast.text).toBe('Tap has no layer you can hear, so there is nothing to build from.');
   });
 });
 

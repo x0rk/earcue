@@ -1,6 +1,7 @@
-import { AppWindow, Download, Keyboard, Monitor, Moon, Play, Redo2, Repeat, Sun, Undo2 } from 'lucide-react';
+import { AppWindow, Download, Keyboard, Monitor, Moon, Palette, Play, Redo2, Repeat, Sun, Undo2 } from 'lucide-react';
 import { APP_NAME } from '../brand.js';
 import { MAX_NAME } from '../engine/model.js';
+import { describeKey } from '../engine/palette.js';
 import { playCompare, playCurrent, setLoop } from '../playback.js';
 import { pickReferenceFile } from '../io.js';
 import { currentSound, edit, editSound, goHome, openDialog, redo, removeRef, setCompare, setPref, setPreview, undo, useStore } from '../store.js';
@@ -74,6 +75,7 @@ function CompareControl() {
 export function TopBar() {
   const name = useStore((s) => currentSound(s).name);
   const setName = useStore((s) => s.ws.name);
+  const setKey = useStore((s) => s.ws.key);
   const loop = useStore((s) => s.loop);
   const canUndo = useStore((s) => s.canUndo);
   const canRedo = useStore((s) => s.canRedo);
@@ -102,6 +104,13 @@ export function TopBar() {
           /
         </span>
         <NameInput label="Set name" value={setName} max={MAX_NAME} fallback="Untitled set" className="min-w-16 max-w-[220px] text-[13px] field-sizing-content" onChange={(v) => edit((ws) => void (ws.name = v), false)} />
+        <Tip label="Set palette: key, loudness and room">
+          <Button variant="ghost" size="sm" className="px-2" onClick={() => openDialog('palette')}>
+            <Palette className="!size-3.5" />
+            {/* Phones keep just the icon, so the names beside it still fit. */}
+            <span className="max-md:sr-only">{setKey ? describeKey(setKey) : 'No key'}</span>
+          </Button>
+        </Tip>
         <span className="text-faint" aria-hidden="true">
           /
         </span>

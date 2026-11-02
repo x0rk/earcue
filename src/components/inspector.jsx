@@ -604,6 +604,12 @@ function OutputInspector() {
           format: (v) => (v > 0 ? `±${v}` : 'Off'),
           hint: 'Nudges the pitch a little on every play so a sound heard many times does not feel robotic. Applied when played, not saved into the WAV.',
         })}
+        <SwitchRow
+          label="Clashes on purpose"
+          checked={!!P.tension}
+          onChange={(v) => editSound((d) => void (v ? (d.tension = true) : delete d.tension))}
+          hint="Leaves this sound out of the set's key checks, and keeps its clash when the set changes key. Error sounds often clash on purpose."
+        />
       </Section>
       <Section
         id="out-eq"
